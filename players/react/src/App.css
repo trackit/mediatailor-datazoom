@@ -1,0 +1,19 @@
+#root {
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+/* Add these styles */
+[data-vjs-player] {
+  width: 80%;  /* Takes 80% of the parent width */
+  margin: 0 auto;  /* Centers the player horizontally */
+  min-width: 640px;  /* Minimum width to ensure it's not too small */
+  max-width: 1200px;  /* Maximum width to prevent it from getting too large */
+}
+
+.video-js {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16/9;  /* Maintains standard video aspect ratio */
+}
