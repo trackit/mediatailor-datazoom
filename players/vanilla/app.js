@@ -51,7 +51,6 @@
               // Datazoom SDK initialization
               datazoomContext = datazoom.createContext(player);
               datazoomContext.attachMediaTailorSession(session);
-              console.log(session);
               // Start OM Session Client
               datazoomContext.startOmidSessionClient({
                   omidServiceWindow: window.self,
