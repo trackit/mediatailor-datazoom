@@ -60,7 +60,7 @@ Resources:
     Properties:
       SourceLocationName: !Ref AWS::StackName
       HttpConfiguration:
-        BaseUrl: !GetAtt CloudFrontDistribution.DomainName
+        BaseUrl: !Sub "https://${CloudFrontDistribution.DomainName}"
 
   MediaTailorChannel:
     Type: AWS::MediaTailor::Channel
