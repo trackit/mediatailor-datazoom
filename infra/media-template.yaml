@@ -1,0 +1,103 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Ad insertion using Media Tailor
+
+Parameters:
+  AdDecisionServerUrl:
+    Type: String
+    Description: 'The URL for the ad decision server (ADS).'
+  VideoContentSourceUrl:
+    Type: String
+    Description: 'The URL prefix for the parent manifest for the stream, minus the asset ID.'
+  AssetsBucket:
+    Type: String
+    Description: 'The bucket containing the assets.'
+  PrimaryVodSourcePath:
+    Type: String
+    Description: 'The path to the primary VOD source.'
+  SecondaryVodSourcePath:
+    Type: String
+    Description: 'The path to the secondary VOD source.'
+  CloudFrontCachePolicy:
+    Type: String
+    Default: 658327ea-f89d-4fab-a63d-7e88639e58f6 # CacheOptimized AWS managed cache policy
+    Description: 'The ID of the CloudFront cache policy to use.'
+
+Resources:
+  ###############################
+  #         MediaTailor         #
+  ###############################
+  MediaTailorConfig:
+    Type: AWS::MediaTailor::PlaybackConfiguration
+    Properties:
+      Name: !Ref AWS::StackName
+      AdDecisionServerUrl: !Ref AdDecisionServerUrl
+      VideoContentSourceUrl: !Ref VideoContentSourceUrl
+
+  MediaTailorVodSourcePrimary:
+    Type: AWS::MediaTailor::VodSource
+    Properties:
+      SourceLocationName: !Ref MediaTailorSourceLocation
+      HttpPackageConfigurations:
+        - Path: !Ref PrimaryVodSourcePath
+          SourceGroup: main
+          Type: HLS
+      VodSourceName: !Sub "${AWS::StackName}-primary"
+
+  MediaTailorVodSourceSecondary:
+    Type: AWS::MediaTailor::VodSource
+    Properties:
+      SourceLocationName: !Ref MediaTailorSourceLocation
+      HttpPackageConfigurations:
+        - Path: !Ref SecondaryVodSourcePath
+          SourceGroup: main
+          Type: HLS
+      VodSourceName: !Sub "${AWS::StackName}-secondary"
+
+  MediaTailorSourceLocation:
+    Type: AWS::MediaTailor::SourceLocation
+    Properties:
+      SourceLocationName: !Ref AWS::StackName
+      HttpConfiguration:
+        BaseUrl: !Sub "https://${CloudFrontDistribution.DomainName}"
+
+  MediaTailorChannel:
+    Type: AWS::MediaTailor::Channel
+    Properties:
+      ChannelName: !Ref AWS::StackName
+      PlaybackMode: LOOP
+      Outputs:
+        - ManifestName: index
+          SourceGroup: main
+          HlsPlaylistSettings:
+            AdMarkupType:
+              - DATERANGE
+            ManifestWindowSeconds: 30
+
+  ##############################
+          CloudFront          #
+  ##############################
+  CloudFrontOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Ref AWS::StackName
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Origins:
+          - DomainName: !Sub ${AssetsBucket}.s3.${AWS::Region}.amazonaws.com
+            Id: !Ref AWS::StackName
+            OriginAccessControlId: !Ref CloudFrontOriginAccessControl
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+        DefaultCacheBehavior:
+          TargetOriginId: !Ref AWS::StackName
+          ViewerProtocolPolicy: redirect-to-https
+          CachePolicyId: !Ref CloudFrontCachePolicy
