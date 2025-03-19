@@ -148,3 +148,96 @@ Resources:
       Targets:
         S3Targets:
           - Path: !Sub "${AWS::StackName}-logs/datazoom-connector/"
+
+  ###############################
+  #           Athena            #
+  ###############################
+  AthenaWorkGroup:
+    Type: AWS::Athena::WorkGroup
+    Properties:
+      Name: !Ref AWS::StackName
+      RecursiveDeleteOption: true
+      State: ENABLED
+      WorkGroupConfiguration:
+        BytesScannedCutoffPerQuery: 100000000
+        EnforceWorkGroupConfiguration: true
+        PublishCloudWatchMetricsEnabled: true
+        ResultConfiguration:
+          OutputLocation: !Sub 's3://aws-athena-query-results-${AWS::Region}-${AWS::AccountId}/'
+
+  ###############################
+  #           Grafana           #
+  ###############################
+  GrafanaIAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: grafana.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: GrafanaAthenaPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "athena:ListDatabases"
+                  - "athena:ListDataCatalogs"
+                  - "athena:ListWorkGroups"
+                  - "athena:GetDatabase"
+                  - "athena:GetDataCatalog"
+                  - "athena:GetQueryExecution"
+                  - "athena:GetQueryResults"
+                  - "athena:GetTableMetadata"
+                  - "athena:GetWorkGroup"
+                  - "athena:ListTableMetadata"
+                  - "athena:StartQueryExecution"
+                  - "athena:StopQueryExecution"
+                Resource:
+                  - "*"
+              - Effect: Allow
+                Action:
+                  - "glue:GetDatabase"
+                  - "glue:GetDatabases"
+                  - "glue:GetTable"
+                  - "glue:GetTables"
+                  - "glue:GetPartition"
+                  - "glue:GetPartitions"
+                  - "glue:BatchGetPartition"
+                Resource:
+                  - "*"
+              - Effect: Allow
+                Action:
+                  - "s3:GetBucketLocation"
+                  - "s3:GetObject"
+                  - "s3:ListBucket"
+                  - "s3:ListBucketMultipartUploads"
+                  - "s3:ListMultipartUploadParts"
+                  - "s3:AbortMultipartUpload"
+                  - "s3:PutObject"
+                Resource:
+                  - !Sub 'arn:aws:s3:::aws-athena-query-results-${AWS::Region}-${AWS::AccountId}'
+              - Effect: Allow
+                Action:
+                  - "s3:GetObject"
+                  - "s3:ListBucket"
+                Resource:
+                  - !Sub 'arn:aws:s3:::${AWS::StackName}-logs/*'
+
+  AmazonGrafanaWorkspace:
+    Type: AWS::Grafana::Workspace
+    Properties:
+      Name: !Ref AWS::StackName
+      AccountAccessType: CURRENT_ACCOUNT
+      AuthenticationProviders:
+        - AWS_SSO
+      PermissionType: SERVICE_MANAGED
+      GrafanaVersion: 10.4
+      RoleArn: !GetAtt GrafanaIAMRole.Arn
+      DataSources:
+        - ATHENA
+      PluginAdminEnabled: true
