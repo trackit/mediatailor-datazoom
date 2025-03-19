@@ -6,6 +6,19 @@ Resources:
   ###############################
   #           Kinesis           #
   ###############################
+  DatazoomFirehoseIAMUser:
+      Type: 'AWS::IAM::User'
+      Properties:
+        Policies:
+          - PolicyName: 'FirehoseUserPolicy'
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - firehose:*
+                  Resource: !GetAtt KinesisFirehoseStream.Arn
+
   KinesisServiceRole:
     Type: 'AWS::IAM::Role'
     Properties:
