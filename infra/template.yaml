@@ -221,12 +221,14 @@ Resources:
                   - "s3:PutObject"
                 Resource:
                   - !Sub 'arn:aws:s3:::aws-athena-query-results-${AWS::Region}-${AWS::AccountId}'
+                  - !Sub 'arn:aws:s3:::aws-athena-query-results-${AWS::Region}-${AWS::AccountId}/*'
               - Effect: Allow
                 Action:
                   - "s3:GetObject"
                   - "s3:ListBucket"
                 Resource:
                   - !Sub 'arn:aws:s3:::${AWS::StackName}-logs/*'
+                  - !Sub 'arn:aws:s3:::${AWS::StackName}-logs'
 
   AmazonGrafanaWorkspace:
     Type: AWS::Grafana::Workspace
