@@ -16,8 +16,13 @@ Resources:
               Statement:
                 - Effect: Allow
                   Action:
+                    - firehose:ListDeliveryStreams
+                  Resource: '*'
+                - Effect: Allow
+                  Action:
                     - firehose:*
                   Resource: !GetAtt KinesisFirehoseStream.Arn
+              
 
   KinesisServiceRole:
     Type: 'AWS::IAM::Role'
@@ -151,6 +156,68 @@ Resources:
       CatalogId: !Ref AWS::AccountId
       DatabaseInput:
         Name: !Ref AWS::StackName
+  
+  GlueTable:
+    Type: AWS::Glue::Table
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: !Ref GlueDatabase
+      TableInput:
+        Name: "${AWS::StackName}-glue-table"
+        TableType: EXTERNAL_TABLE
+        StorageDescriptor:
+          Columns:
+            - Name: configuration_id
+              Type: string
+              Comment: ""
+            - Name: event_id
+              Type: string
+              Comment: ""
+            - Name: event
+              Type: struct<type:string,timestamp:timestamp,metrics:struct<engagement_duration_ms:int,event_count:int,num_requests_content:int,num_content_plays:int,num_errors:int,num_errors_content:int,pause_duration_content_ms:int,time_since_last_rendition_change_ms:int,time_since_last_heartbeat_ms:int,time_since_last_milestone_content_ms:int,time_since_request_content_ms:int,time_since_started_content_ms:int,time_since_last_pause_ms:int,time_since_last_buffer_start_content_ms:int,stall_count_content:int,player_state:string,stall_duration_content_ms:int,buffer_duration_content_ms:int,stall_duration_ms:int,stall_count:int,playback_duration_promo_ms:int,playback_duration_content_ms:int,time_since_last_stall_start_content_ms:int,time_since_last_milestone_ad_ms:int,bandwidth_kbps:int,pause_duration_ms:int,time_since_last_buffer_start_ad_ms:int,time_since_last_stall_start_ms:int,time_since_last_stall_start_ad_ms:int,time_since_last_seek_start_ms:int,playback_duration_ms:int,buffer_duration_ms:int,time_since_last_buffer_start_ms:int,content_session_start_ts_ms:bigint,player_viewable:boolean,playback_rate:int,playhead_position_sec:double,current_audio_track:string,buffer_length_ms:int,volume_level_percent:int,player_viewable_percent:int,rendition_video_bitrate_kbps:int,rendition_width:int,rendition_name:string,rendition_height:int,playhead_pdt_sec:double,num_ad_plays:int,time_since_last_ad_break_start_ms:int,time_since_last_ad_completed_ms:int,stall_duration_ads_ms:int,time_since_last_request_ad_ms:int,pause_duration_ads_ms:int,buffer_duration_ads_ms:int,playback_duration_ads_ms:int,time_since_last_started_ad_ms:int,stall_count_ads:int,num_errors_ads:int,playback_duration_ad_session_ms:int,num_ad_break_plays:int>,attributes:struct<error_msg:string,error_code:string,startup_duration_content_ms:int,startup_duration_total_ms:int,heartbeat_count:int,abs_shift:string,qualified_view_sec:int,seek_start_point_ms:int,seek_end_point_ms:int>>
+              Comment: ""
+            - Name: user_details
+              Type: struct<app_session_id:string,app_session_start_ts_ms:bigint,client_ip:string,user_agent:string,content_session_id:string>
+              Comment: ""
+            - Name: device
+              Type: struct<browser_name:string,device_id:string,os_version:string,cookies_enabled:boolean,os_name:string,browser_width:int,device_type:string,browser_version:string,browser_height:int>
+              Comment: ""
+            - Name: geo_location
+              Type: struct<continent:string,country_code:string,country:string,city:string,latitude:double,timezone_offset:int,timezone_name:string,continent_code:string,postal_code:string,region:string,region_code:string,longitude:double>
+              Comment: ""
+            - Name: network
+              Type: struct<mobile_connection:boolean,isp:string,asn:string,asn_org:string>
+              Comment: ""
+            - Name: page
+              Type: struct<page_url:string,dz_sdk_version:string,site_domain:string,page_title:string,referrer_url:string>
+              Comment: ""
+            - Name: ad
+              Type: struct<ad_blocker:boolean,ad_id:string,wrapper_creative_ids:array<string>,ad_creative_id:string,skip_time_offset_sec:int,ad_position:string,wrapper_id:array<string>,ad_break_id:string,ad_duration_sec:int,ad_time_offset_sec:int,ad_session_id:string,wrapper_systems:array<string>,ad_system:string>
+              Comment: ""
+            - Name: ops_metadata
+              Type: struct<client_ts_ms:bigint,duplicate:boolean,player_context_id:string>
+              Comment: ""
+            - Name: player
+              Type: struct<player_version:string,player_name:string,subtitles:boolean,streaming_protocol:string,controls:boolean,default_playback_rate:int,preload:string,default_muted:boolean,autostart:boolean,fullscreen:boolean,loop:boolean,ready_state:int,streaming_type:string,muted:boolean,casting:boolean>
+              Comment: ""
+            - Name: video
+              Type: struct<media_type:string,duration_sec:int,source:string,player_height:int,player_width:int>
+              Comment: ""
+          Location: !Sub "s3://${AWS::StackName}-logs/datazoom-connector/"
+          InputFormat: "org.apache.hadoop.mapred.TextInputFormat"
+          OutputFormat: "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat"
+          SerdeInfo:
+            SerializationLibrary: "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe"
+        PartitionKeys:
+          - Name: partition_0
+            Type: string
+            Comment: "Partition (0)"
+          - Name: partition_1
+            Type: string
+            Comment: "Partition (1)"
+          - Name: partition_2
+            Type: string
+            Comment: "Partition (2)"
 
   GlueCrawler:
     Type: AWS::Glue::Crawler
@@ -161,6 +228,8 @@ Resources:
       Targets:
         S3Targets:
           - Path: !Sub "${AWS::StackName}-logs/datazoom-connector/"
+      Schedule: 
+        ScheduleExpression: "cron(0 */6 * * ? *)"
 
   ###############################
   #           Athena            #
