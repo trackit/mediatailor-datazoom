@@ -60,7 +60,7 @@ Resources:
                 Action:
                   - 'lambda:InvokeFunction'
                   - 'lambda:GetFunctionConfiguration'
-                Resource: !GetAtt KinesisFormattingFunction.Arn
+                Resource: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-KinesisFormattingFunction'
 
   KinesisLogsBucket:
     Type: AWS::S3::Bucket
@@ -70,9 +70,10 @@ Resources:
   KinesisFormattingFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/lambda-functions/kinisis-formatting/
+      FunctionName: !Sub "${AWS::StackName}-KinesisFormattingFunction"
+      CodeUri: src/lambda-functions/kinesis-formatting/
       Handler: handler.lambda_handler
-      Role: !GetAtt KinesisServiceRole.Arn
+      # Role: !GetAtt KinesisServiceRole.Arn
       Runtime: python3.12
       Timeout: 60
 

@@ -97,7 +97,7 @@
             "format": 1,
             "rawSQL": "SELECT \n    AVG(totalTimeWatched) / 60000 AS avg_minutes_watched\nFROM (\n    SELECT \n        user_details.content_session_id,\n        MAX(event.metrics.playback_duration_content_ms) AS totalTimeWatched\n    FROM $__table\n    WHERE \n        $__timeFilter(event.timestamp)\n        AND (\n            '$v_device' = 'All' \n            OR device.device_type = '$v_device'\n        )\n    GROUP BY user_details.content_session_id\n) AS unique_sessions;\n",
             "refId": "A",
-            "table": "datazoom_connector2025"
+            "table": "$GLUE_TABLE"
           }
         ],
         "title": "Content Watch Time: $v_device",
@@ -168,7 +168,7 @@
             "format": 1,
             "rawSQL": "SELECT\nevent.type,\nCOUNT(*) AS events\nFROM\n\t$__table\nWHERE\n\t$__timeFilter(event.timestamp)\n  AND\nevent.type = 'error'\n  AND\nvideo.media_type='ad'\n  AND (\n      '$v_device' = 'All' \n      OR device.device_type = '$v_device'\n  )\nGROUP BY 1\nORDER BY events",
             "refId": "A",
-            "table": "datazoom_connector2025"
+            "table": "$GLUE_TABLE"
           }
         ],
         "title": "Ad Errors: $v_device",
@@ -239,7 +239,7 @@
             "format": 1,
             "rawSQL": "SELECT \nSUM(playbackDurationAds)/60000\nFROM (\n\t  SELECT user_details.content_session_id,\n\t\tMAX(event.metrics.playback_duration_ads_ms) as playbackDurationAds\n\tFROM $__table\n\t\t    WHERE $__timeFilter(event.timestamp)\n  AND (\n      '$v_device' = 'All' \n      OR device.device_type = '$v_device'\n  )\n\tGROUP BY user_details.content_session_id\n\t)",
             "refId": "A",
-            "table": "datazoom_connector2025"
+            "table": "$GLUE_TABLE"
           }
         ],
         "title": "Ad Minutes: $v_device",
@@ -315,7 +315,7 @@
             "hide": true,
             "rawSQL": "SELECT\n  (COUNT(DISTINCT ad.ad_session_id))\nFROM\n\t$__table\nWHERE\n\t$__timeFilter(event.timestamp)\n  AND (\n      '$v_device' = 'All' \n      OR device.device_type = '$v_device'\n  )",
             "refId": "A",
-            "table": "datazoom_connector2025"
+            "table": "$GLUE_TABLE"
           },
           {
             "connectionArgs": {
@@ -333,7 +333,7 @@
             "hide": true,
             "rawSQL": "SELECT\nevent.type,\nCOUNT(*) AS events\nFROM\n\t$__table\n  WHERE\n\t$__timeFilter(event.timestamp)\n  AND\nevent.type = 'ad_break_start'\nAND\nvideo.media_type='ad'\nGROUP BY 1\nORDER BY events",
             "refId": "B",
-            "table": "datazoom_connector2025"
+            "table": "$GLUE_TABLE"
           },
           {
             "datasource": {
@@ -420,7 +420,7 @@
             "hide": true,
             "rawSQL": "SELECT\n  (COUNT(DISTINCT user_details.app_session_id))\nFROM\n\t$__table\nWHERE\n\t$__timeFilter(event.timestamp)\n  AND (\n      '$v_device' = 'All' \n      OR device.device_type = '$v_device'\n  )\n ",
             "refId": "A",
-            "table": "datazoom_connector2025"
+            "table": "$GLUE_TABLE"
           },
           {
             "connectionArgs": {
@@ -438,7 +438,7 @@
             "hide": true,
             "rawSQL": "SELECT\nevent.type,\nCOUNT(*) AS events\nFROM\n\t$__table\n  WHERE\n\t$__timeFilter(event.timestamp)\n  AND\nevent.type = 'ad_break_start'\nAND\nvideo.media_type='ad'\nGROUP BY 1\nORDER BY events",
             "refId": "B",
-            "table": "datazoom_connector2025"
+            "table": "$GLUE_TABLE"
           },
           {
             "datasource": {
@@ -523,7 +523,7 @@
             "format": 1,
             "rawSQL": "SELECT \n    SUM(totalTimeWatched) / 60000 AS total_minutes_watched\nFROM (\n    SELECT DISTINCT user_details.content_session_id, \n        MAX(event.metrics.playback_duration_content_ms) OVER (PARTITION BY user_details.content_session_id) AS totalTimeWatched\n    FROM $__table\n    WHERE \n        $__timeFilter(event.timestamp)\n        AND (\n            '$v_device' = 'All' \n            OR device.device_type = '$v_device'\n        )\n        AND (\n            '$v_app_session' = 'All'\n            OR user_details.app_session_id = '$v_app_session'\n        )\n) AS unique_sessions;\n",
             "refId": "A",
-            "table": "datazoom_connector2025"
+            "table": "$GLUE_TABLE"
           }
         ],
         "title": "Total Time Watched: $v_device by $v_app_session",
@@ -652,7 +652,7 @@
             "format": 1,
             "rawSQL": "SELECT\n  $__timeGroup(event.timestamp, $interval),\n  COUNT(DISTINCT CASE WHEN ((video.media_type) LIKE ('ad')) THEN ad.ad_break_id  ELSE NULL END)  AS \"Ad Opportunity\"\nFROM\n  $__table() \nWHERE\n  $__timeFilter(event.timestamp)\nAND (\n    '$v_device' = 'All' \n    OR device.device_type = '$v_device'\n  )\nGROUP BY 1\nORDER BY 1 DESC\n",
             "refId": "A",
-            "table": "datazoom_connector2025"
+            "table": "$GLUE_TABLE"
           }
         ],
         "title": "Ad Opportunities: $v_device",
@@ -783,7 +783,7 @@
             "format": 1,
             "rawSQL": "SELECT\n   $__timeGroup(event.timestamp, $interval) ,\n((1 - CAST(SUM(CASE WHEN event.type = 'ad_impression'  THEN 1 END) AS double) / CAST(SUM(CASE WHEN video.media_type LIKE ('ad') THEN 1 END) AS double)) * 100) AS \"Ad Fill Rate\"\n\nFROM $__table() \n\nWHERE\n  $__timeFilter(event.timestamp)\n  AND (\n      '$v_device' = 'All' \n      OR device.device_type = '$v_device'\n  )\nGROUP BY\n    1\nORDER BY\n    1 DESC\nLIMIT 500",
             "refId": "A",
-            "table": "datazoom_connector2025"
+            "table": "$GLUE_TABLE"
           }
         ],
         "title": "Ad Fill Rate: $v_device",
@@ -854,7 +854,7 @@
             "format": 1,
             "rawSQL": "SELECT \n    event.type, \n    COUNT(*) AS events\nFROM\n    $__table\nWHERE\n    $__timeFilter(event.timestamp)\n    AND video.media_type = 'ad'\n    AND (\n        '$v_device' = 'All' \n        OR device.device_type = '$v_device'\n    )\nGROUP BY 1\nORDER BY events\n",
             "refId": "A",
-            "table": "datazoom_connector2025"
+            "table": "$GLUE_TABLE"
           }
         ],
         "title": "Ad Requests: $v_device",
@@ -925,7 +925,7 @@
             "format": 1,
             "rawSQL": "SELECT \n    event.type, \n    COUNT(*) AS events\nFROM\n    $__table\nWHERE\n    $__timeFilter(event.timestamp)\n    AND \n    event.type = 'ad_impression'\n    AND (\n        '$v_device' = 'All' \n        OR device.device_type = '$v_device'\n    )\nGROUP BY 1\nORDER BY events\n",
             "refId": "A",
-            "table": "datazoom_connector2025"
+            "table": "$GLUE_TABLE"
           }
         ],
         "title": "Ad Impressions: $v_device",
@@ -1028,7 +1028,7 @@
             "format": 1,
             "rawSQL": "SELECT\n    $__timeGroup(event.timestamp, $interval) ,\n    COUNT(CASE WHEN ((event.type) LIKE 'ad_impression') THEN 1 ELSE NULL END) AS \"Ad Impressions\"\nFROM\n  $__table() \nWHERE\n  $__timeFilter(event.timestamp)\n  AND (\n      '$v_device' = 'All' \n      OR device.device_type = '$v_device'\n  )\nGROUP BY 1\nORDER BY 1\n\n",
             "refId": "A",
-            "table": "datazoom_connector2025"
+            "table": "$GLUE_TABLE"
           }
         ],
         "title": "Ad Impressions: $v_device",
@@ -1149,7 +1149,7 @@
             "format": 1,
             "rawSQL": "SELECT\n  distinct(device.device_type) AS \"Device\",\n  ((1 - CAST(SUM(CASE WHEN event.type = 'ad_break_end'  THEN 1 END) AS double) / CAST(SUM(CASE WHEN event.type = 'ad_break_start' THEN 1 END) AS double)) * 100) AS \"Ad Break Drop Off\"\n\nFROM\n  $__table()\nWHERE\n  $__timeFilter(event.timestamp)\n  AND\n  video.media_type = 'ad'\n  AND (\n      '$v_device' = 'All' \n      OR device.device_type = '$v_device'\n  )  \nGROUP by 1\nORDER BY 2 DESC",
             "refId": "A",
-            "table": "datazoom_connector2025"
+            "table": "$GLUE_TABLE"
           }
         ],
         "title": "Ad Drop Off:  $v_device",
@@ -1254,7 +1254,7 @@
             "format": 1,
             "rawSQL": "SELECT\n  $__timeGroup(event.timestamp, $interval),\n  ((1 - CAST(SUM(CASE WHEN event.type = 'playback_complete' THEN 1 END) AS double) / CAST(SUM(CASE WHEN event.type = 'playback_start' THEN 1 END) AS double)) * 100) AS Ad_Completion_Rate\n\nFROM\n$__table() \nWHERE\n  $__timeFilter(event.timestamp) \n  AND\n  video.media_type = 'ad'\n  AND (\n      '$v_device' = 'All' \n      OR device.device_type = '$v_device'\n  )  \n\nGROUP by 1\nORDER by 1",
             "refId": "A",
-            "table": "datazoom_connector2025"
+            "table": "$GLUE_TABLE"
           }
         ],
         "title": "Ad Completion Rate: $v_device",
@@ -1367,7 +1367,7 @@
             "format": 1,
             "rawSQL": "SELECT\n  ad.ad_system AS \"Ad System\",\n  COUNT(CASE WHEN (( event.type  ) LIKE 'ad_impression') THEN 1 ELSE NULL END) AS \"Ad Impressions\"\nFROM $__table() \nWHERE\n  $__timeFilter(event.timestamp)\nAND (\n    '$v_device' = 'All' \n    OR device.device_type = '$v_device'\n)\n  \n  GROUP by 1\n  ORDER by 1\n",
             "refId": "A",
-            "table": "datazoom_connector2025"
+            "table": "$GLUE_TABLE"
           }
         ],
         "title": "Impressions by Ad System: $v_device",
@@ -1481,7 +1481,7 @@
             "format": 1,
             "rawSQL": "SELECT\n  event.attributes.error_msg AS \"Error Message\",\n  event.attributes.error_code AS \"Error Code\",\n  COUNT(CASE WHEN ((event.type) LIKE 'error') THEN 1 ELSE NULL END) AS \"Error Count\"\nFROM\n  $__table()\nWHERE\n  $__timeFilter(event.timestamp)\nAND\n  video.media_type = 'ad'\nAND (\n  '$v_device' = 'All' \n  OR device.device_type = '$v_device'\n) \nGROUP by 1,2\n\n\n",
             "refId": "A",
-            "table": "datazoom_connector2025"
+            "table": "$GLUE_TABLE"
           }
         ],
         "title": "Error Details: $v_device",
@@ -1612,7 +1612,7 @@
             "format": 1,
             "rawSQL": "SELECT\n$__timeGroup(event.timestamp, $interval),\n((1 - CAST(SUM(CASE WHEN event.type = 'error' THEN 1 END) AS double) / CAST(SUM(CASE WHEN event.type = 'media_request' THEN 1 END) AS double)) * 100) AS \"Ad Error Rate\"\nFROM $__table\nWHERE\n  $__timeFilter(event.timestamp)\nAND\n  video.media_type='ad'\nAND (\n    '$v_device' = 'All' \n    OR device.device_type = '$v_device'\n)\n\nGROUP BY 1\nORDER BY 1",
             "refId": "A",
-            "table": "datazoom_connector2025"
+            "table": "$GLUE_TABLE"
           }
         ],
         "title": "Ad Error Rate: $v_device",
@@ -1727,7 +1727,7 @@
             },
             "format": 1,
             "rawSQL": "SELECT 'All' AS Device\nUNION\nSELECT distinct(device.device_type) AS Device\nFROM $__table \nWHERE $__timeFilter(event.timestamp)",
-            "table": "datazoom_connector2025"
+            "table": "$GLUE_TABLE"
           },
           "refresh": 1,
           "regex": "",
@@ -1762,7 +1762,7 @@
             },
             "format": 1,
             "rawSQL": "SELECT 'All' AS AppSessionId \nUNION \nSELECT DISTINCT user_details.app_session_id AS AppSessionId \nFROM $__table \nWHERE $__timeFilter(event.timestamp)\n",
-            "table": "datazoom_connector2025"
+            "table": "$GLUE_TABLE"
           },
           "refresh": 1,
           "regex": "",
@@ -1797,7 +1797,7 @@
             },
             "format": 1,
             "rawSQL": "SELECT 'All' AS Country \nUNION \nSELECT DISTINCT geo_location.country AS Country \nFROM $__table \nWHERE $__timeFilter(event.timestamp)\n",
-            "table": "datazoom_connector2025"
+            "table": "$GLUE_TABLE"
           },
           "refresh": 1,
           "regex": "",
@@ -1828,7 +1828,7 @@
             },
             "format": 1,
             "rawSQL": "SELECT 'All' AS ContentSessionId \nUNION \nSELECT DISTINCT user_details.content_session_id AS ContentSessionId \nFROM $__table \nWHERE $__timeFilter(event.timestamp)\n",
-            "table": "datazoom_connector2025"
+            "table": "$GLUE_TABLE"
           },
           "refresh": 1,
           "regex": "",
@@ -1859,7 +1859,7 @@
             },
             "format": 1,
             "rawSQL": "SELECT 'All' AS City \nUNION \nSELECT DISTINCT geo_location.city AS City \nFROM $__table \nWHERE $__timeFilter(event.timestamp)\n",
-            "table": "datazoom_connector2025"
+            "table": "$GLUE_TABLE"
           },
           "refresh": 1,
           "regex": "",
@@ -1890,7 +1890,7 @@
             },
             "format": 1,
             "rawSQL": "SELECT 'All' AS OS\nUNION\nSELECT distinct(device.os_name) AS OS\nFROM $__table \nWHERE $__timeFilter(event.timestamp)",
-            "table": "datazoom_connector2025"
+            "table": "$GLUE_TABLE"
           },
           "refresh": 1,
           "regex": "",
@@ -1921,7 +1921,7 @@
             },
             "format": 1,
             "rawSQL": "SELECT 'All' AS OsVersion\nUNION\nSELECT distinct(device.os_version) AS OsVersion\nFROM $__table \nWHERE $__timeFilter(event.timestamp)",
-            "table": "datazoom_connector2025"
+            "table": "$GLUE_TABLE"
           },
           "refresh": 1,
           "regex": "",
@@ -1952,7 +1952,7 @@
             },
             "format": 1,
             "rawSQL": "SELECT 'All' AS ASN\nUNION\nSELECT distinct(network.asn) AS ASN\nFROM $__table \nWHERE $__timeFilter(event.timestamp)",
-            "table": "datazoom_connector2025"
+            "table": "$GLUE_TABLE"
           },
           "refresh": 1,
           "regex": "",
@@ -1983,7 +1983,7 @@
             },
             "format": 1,
             "rawSQL": "SELECT 'All' AS PageTitle\nUNION\nSELECT distinct(page.page_title) AS PageTitle\nFROM $__table \nWHERE $__timeFilter(event.timestamp)",
-            "table": "datazoom_connector2025"
+            "table": "$GLUE_TABLE"
           },
           "refresh": 1,
           "regex": "",
