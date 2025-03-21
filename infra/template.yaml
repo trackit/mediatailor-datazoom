@@ -9,6 +9,7 @@ Resources:
   DatazoomFirehoseIAMUser:
       Type: 'AWS::IAM::User'
       Properties:
+        UserName: !Sub "${AWS::StackName}-firehose-user-access"
         Policies:
           - PolicyName: 'FirehoseUserPolicy'
             PolicyDocument:
