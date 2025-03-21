@@ -1,6 +1,6 @@
 # AWS Managed Grafana Dashboard powered by Datazoom and MediaTailor
 
-![Trackflix Live Status view](assets/dashboard-home-page.png)
+<img src="assets/dashboard-home-page.png" alt="Dashboard home page" width="50%"/>
 
 This project utilizes AWS Managed Grafana and Kinesis Firehose to create a dashboard that visualizes ad performance data powered by Datazoom and MediaTailor.
 Datazoom collects and processes ad performance data directly from client-side video players and sends it to Kinesis Firehose for further processing.
@@ -8,7 +8,7 @@ Kinesis Firehose then delivers the data to Amazon S3, where it is stored and mad
 
 ## Architecture diagram
 
-![Architecture Diagram](assets/architecture-diagram.png)
+<img src="assets/architecture-diagram.png" alt="Architecture diagram" width="50%"/>
 
 # Deployment
 
