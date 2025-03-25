@@ -3,7 +3,7 @@
     const mediatailor = datazoom.mediatailor;
 
   datazoom.init({
-      configuration_id: "90ccdc0e-ba85-4d3b-ae4e-8ef1b02d389c"
+      configuration_id: "CONFIGURATION_ID" // Modify
   });
 
   const palConsentSettings = {
@@ -162,5 +162,4 @@
           console.error(`Session initialization error`, error);
       }
   );
-
   })();
