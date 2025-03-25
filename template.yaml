@@ -139,7 +139,7 @@ Resources:
                   - 's3:GetObject'
                   - 's3:PutObject'
                 Resource:
-                  - !Sub 'arn:aws:s3:::${AWS::StackName}-logs/datazoom-connector/*'
+                  - !Sub 'arn:aws:s3:::${AWS::StackName}-logs/datazoom_connector/*'
 
   GlueDatabase:
     Type: 'AWS::Glue::Database'
@@ -182,7 +182,7 @@ Resources:
               Type: struct<player_version:string,player_name:string,subtitles:boolean,streaming_protocol:string,controls:boolean,default_playback_rate:int,preload:string,default_muted:boolean,autostart:boolean,fullscreen:boolean,loop:boolean,ready_state:int,streaming_type:string,muted:boolean,casting:boolean>
             - Name: video
               Type: struct<media_type:string,duration_sec:int,source:string,player_height:int,player_width:int>
-          Location: !Sub 's3://${AWS::StackName}-logs/datazoom-connector/'
+          Location: !Sub 's3://${AWS::StackName}-logs/datazoom_connector/'
           InputFormat: 'org.apache.hadoop.mapred.TextInputFormat'
           OutputFormat: 'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
           SerdeInfo:
@@ -196,7 +196,7 @@ Resources:
       DatabaseName: !Ref GlueDatabase
       Targets:
         S3Targets:
-          - Path: !Sub '${AWS::StackName}-logs/datazoom-connector/'
+          - Path: !Sub '${AWS::StackName}-logs/datazoom_connector/'
       Schedule:
         ScheduleExpression: 'cron(0 */6 * * ? *)'
       SchemaChangePolicy:
