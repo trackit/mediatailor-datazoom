@@ -1,2 +1,5 @@
 .aws-sam
 node_modules
+.DS_Store
+deploy.sh
+.env
