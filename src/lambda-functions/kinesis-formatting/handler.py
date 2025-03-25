@@ -5,7 +5,7 @@ import logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-def lambda_handler(event, context):  # Renamed from handler to lambda_handler
+def lambda_handler(event, context):
     logger.info('Loading JSONL Processing Function')
 
     output = []
