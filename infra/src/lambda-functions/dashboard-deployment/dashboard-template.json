@@ -32,9 +32,9 @@
       {
         "datasource": {
           "type": "grafana-athena-datasource",
-          "uid": "fef4wg218olq8b"
+          "uid": "$DATASOURCE_UUID"
         },
-        "description": "This metric creates an average duration of time spent watching content during a series of video views.",
+        "description": "The average duration of an ad break. Can be down to a single ad break or used as an average. ",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -53,7 +53,8 @@
                   "value": 80
                 }
               ]
-            }
+            },
+            "unit": "dtdurations"
           },
           "overrides": []
         },
@@ -63,7 +64,7 @@
           "x": 0,
           "y": 0
         },
-        "id": 42,
+        "id": 43,
         "options": {
           "colorMode": "value",
           "graphMode": "area",
@@ -73,7 +74,7 @@
             "calcs": [
               "lastNotNull"
             ],
-            "fields": "",
+            "fields": "/.*/",
             "values": false
           },
           "showPercentChange": false,
@@ -92,21 +93,21 @@
             },
             "datasource": {
               "type": "grafana-athena-datasource",
-              "uid": "fef4wg218olq8b"
+              "uid": "$DATASOURCE_UUID"
             },
             "format": 1,
-            "rawSQL": "SELECT \n    AVG(totalTimeWatched) / 60000 AS avg_minutes_watched\nFROM (\n    SELECT \n        user_details.content_session_id,\n        MAX(event.metrics.playback_duration_content_ms) AS totalTimeWatched\n    FROM $__table\n    WHERE \n        $__timeFilter(event.timestamp)\n        AND (\n            '$v_device' = 'All' \n            OR device.device_type = '$v_device'\n        )\n    GROUP BY user_details.content_session_id\n) AS unique_sessions;\n",
+            "rawSQL": "SELECT \n    AVG(playback_duration_ads) / 1000 AS avg_playback_duration_ads_min\nFROM (\n    SELECT \n        start_event.ad.ad_break_id,\n        MAX(start_event.event.metrics.playback_duration_ads_ms) AS playback_duration_ads\n    FROM $GLUE_TABLE AS start_event\n    JOIN $GLUE_TABLE AS end_event\n        ON start_event.ad.ad_break_id = end_event.ad.ad_break_id\n    WHERE \n        start_event.event.type = 'ad_break_start'\n        AND end_event.event.type = 'ad_break_end'\n    GROUP BY start_event.ad.ad_break_id\n) AS ad_durations;\n",
             "refId": "A",
             "table": "$GLUE_TABLE"
           }
         ],
-        "title": "Content Watch Time: $v_device",
+        "title": "Average Ad Break Duration",
         "type": "stat"
       },
       {
         "datasource": {
           "type": "grafana-athena-datasource",
-          "uid": "fef4wg218olq8b"
+          "uid": "$DATASOURCE_UUID"
         },
         "fieldConfig": {
           "defaults": {
@@ -163,21 +164,21 @@
             },
             "datasource": {
               "type": "grafana-athena-datasource",
-              "uid": "7xh5xGgSz"
+              "uid": "$DATASOURCE_UUID"
             },
             "format": 1,
-            "rawSQL": "SELECT\nevent.type,\nCOUNT(*) AS events\nFROM\n\t$__table\nWHERE\n\t$__timeFilter(event.timestamp)\n  AND\nevent.type = 'error'\n  AND\nvideo.media_type='ad'\n  AND (\n      '$v_device' = 'All' \n      OR device.device_type = '$v_device'\n  )\nGROUP BY 1\nORDER BY events",
+            "rawSQL": "SELECT\nevent.type,\nCOUNT(*) AS events\nFROM\n\t$__table\nWHERE\n\t$__timeFilter(event.timestamp)\n  AND\nevent.type = 'error'\n  AND\nvideo.media_type='ad'\n  AND (\n      '$v_device' = 'All' \n      OR device.device_type = '$v_device'\n  )\n  AND (\n      '$v_app_session' = 'All'\n      OR user_details.app_session_id = '$v_app_session'\n  )\n  AND (\n      '$v_country' = 'All'\n      OR geo_location.country = '$v_country'\n  )\n  AND (\n      '$v_content_session_id' = 'All'\n      OR user_details.content_session_id = '$v_content_session_id'\n  )\n  AND (\n      '$v_city' = 'All'\n      OR geo_location.city = '$v_city'\n  )\n  AND (\n      '$v_os_name' = 'All'\n      OR device.os_name = '$v_os_name'\n  )\n  AND (\n      '$v_os_version' = 'All'\n      OR device.os_version = '$v_os_version'\n  )\n  AND (\n      '$v_asn' = 'All'\n      OR network.asn = '$v_asn'\n  )\n  AND (\n      '$v_page_title' = 'All'\n      OR page.page_title = '$v_page_title'\n  )\n  AND (\n      '$v_mobile_connection' = 'All' \n      OR network.mobile_connection = CAST('$v_mobile_connection' AS BOOLEAN)\n  )\nGROUP BY 1\nORDER BY events",
             "refId": "A",
             "table": "$GLUE_TABLE"
           }
         ],
-        "title": "Ad Errors: $v_device",
+        "title": "Ad Errors",
         "type": "stat"
       },
       {
         "datasource": {
           "type": "grafana-athena-datasource",
-          "uid": "fef4wg218olq8b"
+          "uid": "$DATASOURCE_UUID"
         },
         "fieldConfig": {
           "defaults": {
@@ -194,7 +195,7 @@
                 }
               ]
             },
-            "unit": "short"
+            "unit": "m"
           },
           "overrides": []
         },
@@ -234,21 +235,21 @@
             },
             "datasource": {
               "type": "grafana-athena-datasource",
-              "uid": "7xh5xGgSz"
+              "uid": "$DATASOURCE_UUID"
             },
             "format": 1,
-            "rawSQL": "SELECT \nSUM(playbackDurationAds)/60000\nFROM (\n\t  SELECT user_details.content_session_id,\n\t\tMAX(event.metrics.playback_duration_ads_ms) as playbackDurationAds\n\tFROM $__table\n\t\t    WHERE $__timeFilter(event.timestamp)\n  AND (\n      '$v_device' = 'All' \n      OR device.device_type = '$v_device'\n  )\n\tGROUP BY user_details.content_session_id\n\t)",
+            "rawSQL": "SELECT \nSUM(playbackDurationAds)/60000\nFROM (\n\t  SELECT user_details.content_session_id,\n\t\tMAX(event.metrics.playback_duration_ads_ms) as playbackDurationAds\n\tFROM $__table\n\t\t    WHERE $__timeFilter(event.timestamp)\n  AND (\n      '$v_device' = 'All' \n      OR device.device_type = '$v_device'\n  )\n  AND (\n      '$v_app_session' = 'All'\n      OR user_details.app_session_id = '$v_app_session'\n  )\n  AND (\n      '$v_country' = 'All'\n      OR geo_location.country = '$v_country'\n  )\n  AND (\n      '$v_content_session_id' = 'All'\n      OR user_details.content_session_id = '$v_content_session_id'\n  )\n  AND (\n      '$v_city' = 'All'\n      OR geo_location.city = '$v_city'\n  )\n  AND (\n      '$v_os_name' = 'All'\n      OR device.os_name = '$v_os_name'\n  )\n  AND (\n      '$v_os_version' = 'All'\n      OR device.os_version = '$v_os_version'\n  )\n  AND (\n      '$v_asn' = 'All'\n      OR network.asn = '$v_asn'\n  )\n  AND (\n      '$v_page_title' = 'All'\n      OR page.page_title = '$v_page_title'\n  )\n  AND (\n      '$v_mobile_connection' = 'All' \n      OR network.mobile_connection = CAST('$v_mobile_connection' AS BOOLEAN)\n  )\n\tGROUP BY user_details.content_session_id\n\t)",
             "refId": "A",
             "table": "$GLUE_TABLE"
           }
         ],
-        "title": "Ad Minutes: $v_device",
+        "title": "Ad Minutes",
         "type": "stat"
       },
       {
         "datasource": {
           "type": "grafana-athena-datasource",
-          "uid": "fef4wg218olq8b"
+          "uid": "$DATASOURCE_UUID"
         },
         "fieldConfig": {
           "defaults": {
@@ -309,11 +310,11 @@
             },
             "datasource": {
               "type": "grafana-athena-datasource",
-              "uid": "7xh5xGgSz"
+              "uid": "$DATASOURCE_UUID"
             },
             "format": 1,
             "hide": true,
-            "rawSQL": "SELECT\n  (COUNT(DISTINCT ad.ad_session_id))\nFROM\n\t$__table\nWHERE\n\t$__timeFilter(event.timestamp)\n  AND (\n      '$v_device' = 'All' \n      OR device.device_type = '$v_device'\n  )",
+            "rawSQL": "SELECT\n  (COUNT(DISTINCT ad.ad_session_id))\nFROM\n\t$__table\nWHERE\n\t$__timeFilter(event.timestamp)\n  AND (\n      '$v_device' = 'All' \n      OR device.device_type = '$v_device'\n  )\n  AND (\n      '$v_app_session' = 'All'\n      OR user_details.app_session_id = '$v_app_session'\n  )\n  AND (\n      '$v_country' = 'All'\n      OR geo_location.country = '$v_country'\n  )\n  AND (\n      '$v_content_session_id' = 'All'\n      OR user_details.content_session_id = '$v_content_session_id'\n  )\n  AND (\n      '$v_city' = 'All'\n      OR geo_location.city = '$v_city'\n  )\n  AND (\n      '$v_os_name' = 'All'\n      OR device.os_name = '$v_os_name'\n  )\n  AND (\n      '$v_os_version' = 'All'\n      OR device.os_version = '$v_os_version'\n  )\n  AND (\n      '$v_asn' = 'All'\n      OR network.asn = '$v_asn'\n  )\n  AND (\n      '$v_page_title' = 'All'\n      OR page.page_title = '$v_page_title'\n  )\n  AND (\n      '$v_mobile_connection' = 'All' \n      OR network.mobile_connection = CAST('$v_mobile_connection' AS BOOLEAN)\n  )",
             "refId": "A",
             "table": "$GLUE_TABLE"
           },
@@ -327,7 +328,7 @@
             },
             "datasource": {
               "type": "grafana-athena-datasource",
-              "uid": "7xh5xGgSz"
+              "uid": "$DATASOURCE_UUID"
             },
             "format": 1,
             "hide": true,
@@ -347,13 +348,13 @@
             "type": "math"
           }
         ],
-        "title": "Ads per Video: $v_device",
+        "title": "Ads per Video",
         "type": "stat"
       },
       {
         "datasource": {
           "type": "grafana-athena-datasource",
-          "uid": "fef4wg218olq8b"
+          "uid": "$DATASOURCE_UUID"
         },
         "fieldConfig": {
           "defaults": {
@@ -414,11 +415,11 @@
             },
             "datasource": {
               "type": "grafana-athena-datasource",
-              "uid": "7xh5xGgSz"
+              "uid": "$DATASOURCE_UUID"
             },
             "format": 1,
             "hide": true,
-            "rawSQL": "SELECT\n  (COUNT(DISTINCT user_details.app_session_id))\nFROM\n\t$__table\nWHERE\n\t$__timeFilter(event.timestamp)\n  AND (\n      '$v_device' = 'All' \n      OR device.device_type = '$v_device'\n  )\n ",
+            "rawSQL": "SELECT\n  (COUNT(DISTINCT user_details.app_session_id))\nFROM\n\t$__table\nWHERE\n\t$__timeFilter(event.timestamp)\n  AND (\n      '$v_device' = 'All' \n      OR device.device_type = '$v_device'\n  )\n  AND (\n      '$v_app_session' = 'All'\n      OR user_details.app_session_id = '$v_app_session'\n  )\n  AND (\n      '$v_country' = 'All'\n      OR geo_location.country = '$v_country'\n  )\n  AND (\n      '$v_content_session_id' = 'All'\n      OR user_details.content_session_id = '$v_content_session_id'\n  )\n  AND (\n      '$v_city' = 'All'\n      OR geo_location.city = '$v_city'\n  )\n  AND (\n      '$v_os_name' = 'All'\n      OR device.os_name = '$v_os_name'\n  )\n  AND (\n      '$v_os_version' = 'All'\n      OR device.os_version = '$v_os_version'\n  )\n  AND (\n      '$v_asn' = 'All'\n      OR network.asn = '$v_asn'\n  )\n  AND (\n      '$v_page_title' = 'All'\n      OR page.page_title = '$v_page_title'\n  )\n  AND (\n      '$v_mobile_connection' = 'All' \n      OR network.mobile_connection = CAST('$v_mobile_connection' AS BOOLEAN)\n  )\n ",
             "refId": "A",
             "table": "$GLUE_TABLE"
           },
@@ -432,7 +433,7 @@
             },
             "datasource": {
               "type": "grafana-athena-datasource",
-              "uid": "7xh5xGgSz"
+              "uid": "$DATASOURCE_UUID"
             },
             "format": 1,
             "hide": true,
@@ -452,15 +453,15 @@
             "type": "math"
           }
         ],
-        "title": "Ads per App Session: $v_device",
+        "title": "Ads per App Session",
         "type": "stat"
       },
       {
         "datasource": {
           "type": "grafana-athena-datasource",
-          "uid": "fef4wg218olq8b"
+          "uid": "$DATASOURCE_UUID"
         },
-        "description": "This metric reflects the total playback time viewed by users. This KPI is useful for obtaining an understanding of the total time users spent viewing content.\n \n \n \t\nThis metric reflects the total playback time viewed by users. This KPI is useful for obtaining an understanding of the total time users spent viewing content.",
+        "description": "This metric creates an average duration of time spent watching content during a series of video views.",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -479,7 +480,8 @@
                   "value": 80
                 }
               ]
-            }
+            },
+            "unit": "m"
           },
           "overrides": []
         },
@@ -489,7 +491,7 @@
           "x": 0,
           "y": 4
         },
-        "id": 41,
+        "id": 42,
         "options": {
           "colorMode": "value",
           "graphMode": "area",
@@ -518,21 +520,21 @@
             },
             "datasource": {
               "type": "grafana-athena-datasource",
-              "uid": "fef4wg218olq8b"
+              "uid": "$DATASOURCE_UUID"
             },
             "format": 1,
-            "rawSQL": "SELECT \n    SUM(totalTimeWatched) / 60000 AS total_minutes_watched\nFROM (\n    SELECT DISTINCT user_details.content_session_id, \n        MAX(event.metrics.playback_duration_content_ms) OVER (PARTITION BY user_details.content_session_id) AS totalTimeWatched\n    FROM $__table\n    WHERE \n        $__timeFilter(event.timestamp)\n        AND (\n            '$v_device' = 'All' \n            OR device.device_type = '$v_device'\n        )\n        AND (\n            '$v_app_session' = 'All'\n            OR user_details.app_session_id = '$v_app_session'\n        )\n) AS unique_sessions;\n",
+            "rawSQL": "SELECT \n    AVG(totalTimeWatched) / 60000 AS avg_minutes_watched\nFROM (\n    SELECT \n        user_details.content_session_id,\n        MAX(event.metrics.playback_duration_content_ms) AS totalTimeWatched\n    FROM $__table\n    WHERE \n        $__timeFilter(event.timestamp)\n        AND (\n            '$v_device' = 'All' \n            OR device.device_type = '$v_device'\n        )\n        AND (\n            '$v_app_session' = 'All'\n            OR user_details.app_session_id = '$v_app_session'\n        )\n        AND (\n            '$v_country' = 'All'\n            OR geo_location.country = '$v_country'\n        )\n        AND (\n            '$v_content_session_id' = 'All'\n            OR user_details.content_session_id = '$v_content_session_id'\n        )\n        AND (\n            '$v_city' = 'All'\n            OR geo_location.city = '$v_city'\n        )\n        AND (\n            '$v_os_name' = 'All'\n            OR device.os_name = '$v_os_name'\n        )\n        AND (\n            '$v_os_version' = 'All'\n            OR device.os_version = '$v_os_version'\n        )\n        AND (\n            '$v_asn' = 'All'\n            OR network.asn = '$v_asn'\n        )\n        AND (\n            '$v_page_title' = 'All'\n            OR page.page_title = '$v_page_title'\n        )\n        AND (\n            '$v_mobile_connection' = 'All' \n            OR network.mobile_connection = CAST('$v_mobile_connection' AS BOOLEAN)\n        )\n    GROUP BY user_details.content_session_id\n) AS unique_sessions;\n",
             "refId": "A",
             "table": "$GLUE_TABLE"
           }
         ],
-        "title": "Total Time Watched: $v_device by $v_app_session",
+        "title": "Average Content Watch Time",
         "type": "stat"
       },
       {
         "datasource": {
           "type": "grafana-athena-datasource",
-          "uid": "fef4wg218olq8b"
+          "uid": "$DATASOURCE_UUID"
         },
         "fieldConfig": {
           "defaults": {
@@ -647,22 +649,23 @@
             },
             "datasource": {
               "type": "grafana-athena-datasource",
-              "uid": "7xh5xGgSz"
+              "uid": "$DATASOURCE_UUID"
             },
             "format": 1,
-            "rawSQL": "SELECT\n  $__timeGroup(event.timestamp, $interval),\n  COUNT(DISTINCT CASE WHEN ((video.media_type) LIKE ('ad')) THEN ad.ad_break_id  ELSE NULL END)  AS \"Ad Opportunity\"\nFROM\n  $__table() \nWHERE\n  $__timeFilter(event.timestamp)\nAND (\n    '$v_device' = 'All' \n    OR device.device_type = '$v_device'\n  )\nGROUP BY 1\nORDER BY 1 DESC\n",
+            "rawSQL": "SELECT\n  $__timeGroup(event.timestamp, $interval),\n  COUNT(DISTINCT CASE WHEN ((video.media_type) LIKE ('ad')) THEN ad.ad_break_id  ELSE NULL END)  AS \"Ad Opportunity\"\nFROM\n  $__table() \nWHERE\n  $__timeFilter(event.timestamp)\nAND (\n      '$v_device' = 'All' \n      OR device.device_type = '$v_device'\n  )\n  AND (\n      '$v_app_session' = 'All'\n      OR user_details.app_session_id = '$v_app_session'\n  )\n  AND (\n      '$v_country' = 'All'\n      OR geo_location.country = '$v_country'\n  )\n  AND (\n      '$v_content_session_id' = 'All'\n      OR user_details.content_session_id = '$v_content_session_id'\n  )\n  AND (\n      '$v_city' = 'All'\n      OR geo_location.city = '$v_city'\n  )\n  AND (\n      '$v_os_name' = 'All'\n      OR device.os_name = '$v_os_name'\n  )\n  AND (\n      '$v_os_version' = 'All'\n      OR device.os_version = '$v_os_version'\n  )\n  AND (\n      '$v_asn' = 'All'\n      OR network.asn = '$v_asn'\n  )\n  AND (\n      '$v_page_title' = 'All'\n      OR page.page_title = '$v_page_title'\n  )\n  AND (\n      '$v_mobile_connection' = 'All' \n      OR network.mobile_connection = CAST('$v_mobile_connection' AS BOOLEAN)\n  )\nGROUP BY 1\nORDER BY 1 DESC\n",
             "refId": "A",
             "table": "$GLUE_TABLE"
           }
         ],
-        "title": "Ad Opportunities: $v_device",
+        "title": "Ad Opportunities",
         "type": "timeseries"
       },
       {
         "datasource": {
           "type": "grafana-athena-datasource",
-          "uid": "fef4wg218olq8b"
+          "uid": "$DATASOURCE_UUID"
         },
+        "description": "The rate at which ad requests result in an ad impression. Used to determine if the ad system is filling at an appropriate level or configuration changes to the ad exchange network should be considered.",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -778,22 +781,98 @@
             },
             "datasource": {
               "type": "grafana-athena-datasource",
-              "uid": "7xh5xGgSz"
+              "uid": "$DATASOURCE_UUID"
             },
             "format": 1,
-            "rawSQL": "SELECT\n   $__timeGroup(event.timestamp, $interval) ,\n((1 - CAST(SUM(CASE WHEN event.type = 'ad_impression'  THEN 1 END) AS double) / CAST(SUM(CASE WHEN video.media_type LIKE ('ad') THEN 1 END) AS double)) * 100) AS \"Ad Fill Rate\"\n\nFROM $__table() \n\nWHERE\n  $__timeFilter(event.timestamp)\n  AND (\n      '$v_device' = 'All' \n      OR device.device_type = '$v_device'\n  )\nGROUP BY\n    1\nORDER BY\n    1 DESC\nLIMIT 500",
+            "rawSQL": "SELECT\n   $__timeGroup(event.timestamp, $interval) ,\n((1 - CAST(SUM(CASE WHEN event.type = 'ad_impression'  THEN 1 END) AS double) / CAST(SUM(CASE WHEN video.media_type LIKE ('ad') THEN 1 END) AS double)) * 100) AS \"Ad Fill Rate\"\n\nFROM $__table() \n\nWHERE\n  $__timeFilter(event.timestamp)\n  AND (\n      '$v_device' = 'All' \n      OR device.device_type = '$v_device'\n  )\n  AND (\n      '$v_app_session' = 'All'\n      OR user_details.app_session_id = '$v_app_session'\n  )\n  AND (\n      '$v_country' = 'All'\n      OR geo_location.country = '$v_country'\n  )\n  AND (\n      '$v_content_session_id' = 'All'\n      OR user_details.content_session_id = '$v_content_session_id'\n  )\n  AND (\n      '$v_city' = 'All'\n      OR geo_location.city = '$v_city'\n  )\n  AND (\n      '$v_os_name' = 'All'\n      OR device.os_name = '$v_os_name'\n  )\n  AND (\n      '$v_os_version' = 'All'\n      OR device.os_version = '$v_os_version'\n  )\n  AND (\n      '$v_asn' = 'All'\n      OR network.asn = '$v_asn'\n  )\n  AND (\n      '$v_page_title' = 'All'\n      OR page.page_title = '$v_page_title'\n  )\n  AND (\n      '$v_mobile_connection' = 'All' \n      OR network.mobile_connection = CAST('$v_mobile_connection' AS BOOLEAN)\n  )\nGROUP BY\n    1\nORDER BY\n    1 DESC\nLIMIT 500",
             "refId": "A",
             "table": "$GLUE_TABLE"
           }
         ],
-        "title": "Ad Fill Rate: $v_device",
+        "title": "Ad Fill Rate",
         "type": "timeseries"
       },
       {
         "datasource": {
           "type": "grafana-athena-datasource",
-          "uid": "fef4wg218olq8b"
+          "uid": "$DATASOURCE_UUID"
         },
+        "description": "This metric reflects the total playback time viewed by users. This KPI is useful for obtaining an understanding of the total time users spent viewing content.\n \n \n \t\nThis metric reflects the total playback time viewed by users. This KPI is useful for obtaining an understanding of the total time users spent viewing content.",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "m"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 8,
+          "x": 0,
+          "y": 8
+        },
+        "id": 41,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "showPercentChange": false,
+          "textMode": "auto",
+          "wideLayout": true
+        },
+        "pluginVersion": "10.4.1",
+        "targets": [
+          {
+            "connectionArgs": {
+              "catalog": "__default",
+              "database": "__default",
+              "region": "__default",
+              "resultReuseEnabled": false,
+              "resultReuseMaxAgeInMinutes": 60
+            },
+            "datasource": {
+              "type": "grafana-athena-datasource",
+              "uid": "$DATASOURCE_UUID"
+            },
+            "format": 1,
+            "rawSQL": "SELECT \n    SUM(totalTimeWatched) / 60000 AS total_minutes_watched\nFROM (\n    SELECT DISTINCT user_details.content_session_id, \n        MAX(event.metrics.playback_duration_content_ms) OVER (PARTITION BY user_details.content_session_id) AS totalTimeWatched\n    FROM $__table\n    WHERE \n        $__timeFilter(event.timestamp)\n        AND (\n            '$v_device' = 'All' \n            OR device.device_type = '$v_device'\n        )\n        AND (\n            '$v_app_session' = 'All'\n            OR user_details.app_session_id = '$v_app_session'\n        )\n        AND (\n            '$v_country' = 'All'\n            OR geo_location.country = '$v_country'\n        )\n        AND (\n            '$v_content_session_id' = 'All'\n            OR user_details.content_session_id = '$v_content_session_id'\n        )\n        AND (\n            '$v_city' = 'All'\n            OR geo_location.city = '$v_city'\n        )\n        AND (\n            '$v_os_name' = 'All'\n            OR device.os_name = '$v_os_name'\n        )\n        AND (\n            '$v_os_version' = 'All'\n            OR device.os_version = '$v_os_version'\n        )\n        AND (\n            '$v_asn' = 'All'\n            OR network.asn = '$v_asn'\n        )\n        AND (\n            '$v_page_title' = 'All'\n            OR page.page_title = '$v_page_title'\n        )\n        AND (\n            '$v_mobile_connection' = 'All' \n            OR network.mobile_connection = CAST('$v_mobile_connection' AS BOOLEAN)\n        )\n\n) AS unique_sessions;\n",
+            "refId": "A",
+            "table": "$GLUE_TABLE"
+          }
+        ],
+        "title": "Total Time Watched",
+        "type": "stat"
+      },
+      {
+        "datasource": {
+          "type": "grafana-athena-datasource",
+          "uid": "$DATASOURCE_UUID"
+        },
+        "description": "Total ad requests",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -817,7 +896,7 @@
           "h": 5,
           "w": 4,
           "x": 0,
-          "y": 8
+          "y": 12
         },
         "id": 32,
         "options": {
@@ -849,22 +928,23 @@
             },
             "datasource": {
               "type": "grafana-athena-datasource",
-              "uid": "7xh5xGgSz"
+              "uid": "$DATASOURCE_UUID"
             },
             "format": 1,
-            "rawSQL": "SELECT \n    event.type, \n    COUNT(*) AS events\nFROM\n    $__table\nWHERE\n    $__timeFilter(event.timestamp)\n    AND video.media_type = 'ad'\n    AND (\n        '$v_device' = 'All' \n        OR device.device_type = '$v_device'\n    )\nGROUP BY 1\nORDER BY events\n",
+            "rawSQL": "SELECT \n    event.type, \n    COUNT(*) AS events\nFROM\n    $__table\nWHERE\n    $__timeFilter(event.timestamp)\n    AND video.media_type = 'ad'\n    AND (\n            '$v_device' = 'All' \n            OR device.device_type = '$v_device'\n        )\n        AND (\n            '$v_app_session' = 'All'\n            OR user_details.app_session_id = '$v_app_session'\n        )\n        AND (\n            '$v_country' = 'All'\n            OR geo_location.country = '$v_country'\n        )\n        AND (\n            '$v_content_session_id' = 'All'\n            OR user_details.content_session_id = '$v_content_session_id'\n        )\n        AND (\n            '$v_city' = 'All'\n            OR geo_location.city = '$v_city'\n        )\n        AND (\n            '$v_os_name' = 'All'\n            OR device.os_name = '$v_os_name'\n        )\n        AND (\n            '$v_os_version' = 'All'\n            OR device.os_version = '$v_os_version'\n        )\n        AND (\n            '$v_asn' = 'All'\n            OR network.asn = '$v_asn'\n        )\n        AND (\n            '$v_page_title' = 'All'\n            OR page.page_title = '$v_page_title'\n        )\n        AND (\n            '$v_mobile_connection' = 'All' \n            OR network.mobile_connection = CAST('$v_mobile_connection' AS BOOLEAN)\n        )\nGROUP BY 1\nORDER BY events\n",
             "refId": "A",
             "table": "$GLUE_TABLE"
           }
         ],
-        "title": "Ad Requests: $v_device",
+        "title": "Ad Requests",
         "type": "stat"
       },
       {
         "datasource": {
           "type": "grafana-athena-datasource",
-          "uid": "fef4wg218olq8b"
+          "uid": "$DATASOURCE_UUID"
         },
+        "description": "The total number of impressions. Useful revenue indicator that can be broken down by content, user cohort, time of day, etc.",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -888,7 +968,7 @@
           "h": 5,
           "w": 4,
           "x": 4,
-          "y": 8
+          "y": 12
         },
         "id": 40,
         "options": {
@@ -920,124 +1000,21 @@
             },
             "datasource": {
               "type": "grafana-athena-datasource",
-              "uid": "7xh5xGgSz"
+              "uid": "$DATASOURCE_UUID"
             },
             "format": 1,
-            "rawSQL": "SELECT \n    event.type, \n    COUNT(*) AS events\nFROM\n    $__table\nWHERE\n    $__timeFilter(event.timestamp)\n    AND \n    event.type = 'ad_impression'\n    AND (\n        '$v_device' = 'All' \n        OR device.device_type = '$v_device'\n    )\nGROUP BY 1\nORDER BY events\n",
+            "rawSQL": "SELECT \n    event.type, \n    COUNT(*) AS events\nFROM\n    $__table\nWHERE\n    $__timeFilter(event.timestamp)\n    AND \n    event.type = 'ad_impression'\n    AND (\n        '$v_device' = 'All' \n        OR device.device_type = '$v_device'\n    )\n    AND (\n        '$v_app_session' = 'All'\n        OR user_details.app_session_id = '$v_app_session'\n    )\n    AND (\n        '$v_country' = 'All'\n        OR geo_location.country = '$v_country'\n    )\n    AND (\n        '$v_content_session_id' = 'All'\n        OR user_details.content_session_id = '$v_content_session_id'\n    )\n    AND (\n        '$v_city' = 'All'\n        OR geo_location.city = '$v_city'\n    )\n    AND (\n        '$v_os_name' = 'All'\n        OR device.os_name = '$v_os_name'\n    )\n    AND (\n        '$v_os_version' = 'All'\n        OR device.os_version = '$v_os_version'\n    )\n    AND (\n        '$v_asn' = 'All'\n        OR network.asn = '$v_asn'\n    )\n    AND (\n        '$v_page_title' = 'All'\n        OR page.page_title = '$v_page_title'\n    )\n    AND (\n        '$v_mobile_connection' = 'All' \n        OR network.mobile_connection = CAST('$v_mobile_connection' AS BOOLEAN)\n    )\nGROUP BY 1\nORDER BY events\n",
             "refId": "A",
             "table": "$GLUE_TABLE"
           }
         ],
-        "title": "Ad Impressions: $v_device",
+        "title": "Total Ad Impressions",
         "type": "stat"
       },
       {
         "datasource": {
           "type": "grafana-athena-datasource",
-          "uid": "fef4wg218olq8b"
-        },
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "custom": {
-              "axisBorderShow": false,
-              "axisCenteredZero": false,
-              "axisColorMode": "text",
-              "axisLabel": "",
-              "axisPlacement": "auto",
-              "barAlignment": 0,
-              "drawStyle": "line",
-              "fillOpacity": 0,
-              "gradientMode": "none",
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
-              },
-              "insertNulls": false,
-              "lineInterpolation": "smooth",
-              "lineWidth": 1,
-              "pointSize": 5,
-              "scaleDistribution": {
-                "type": "linear"
-              },
-              "showPoints": "never",
-              "spanNulls": false,
-              "stacking": {
-                "group": "A",
-                "mode": "none"
-              },
-              "thresholdsStyle": {
-                "mode": "off"
-              }
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            },
-            "unit": "short"
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 9,
-          "w": 8,
-          "x": 0,
-          "y": 13
-        },
-        "id": 4,
-        "options": {
-          "legend": {
-            "calcs": [
-              "sum"
-            ],
-            "displayMode": "list",
-            "placement": "bottom",
-            "showLegend": true
-          },
-          "tooltip": {
-            "mode": "single",
-            "sort": "none"
-          }
-        },
-        "targets": [
-          {
-            "connectionArgs": {
-              "catalog": "__default",
-              "database": "__default",
-              "region": "__default",
-              "resultReuseEnabled": false,
-              "resultReuseMaxAgeInMinutes": 60
-            },
-            "datasource": {
-              "type": "grafana-athena-datasource",
-              "uid": "N-zJQv0Vz"
-            },
-            "format": 1,
-            "rawSQL": "SELECT\n    $__timeGroup(event.timestamp, $interval) ,\n    COUNT(CASE WHEN ((event.type) LIKE 'ad_impression') THEN 1 ELSE NULL END) AS \"Ad Impressions\"\nFROM\n  $__table() \nWHERE\n  $__timeFilter(event.timestamp)\n  AND (\n      '$v_device' = 'All' \n      OR device.device_type = '$v_device'\n  )\nGROUP BY 1\nORDER BY 1\n\n",
-            "refId": "A",
-            "table": "$GLUE_TABLE"
-          }
-        ],
-        "title": "Ad Impressions: $v_device",
-        "type": "timeseries"
-      },
-      {
-        "datasource": {
-          "type": "grafana-athena-datasource",
-          "uid": "fef4wg218olq8b"
+          "uid": "$DATASOURCE_UUID"
         },
         "fieldConfig": {
           "defaults": {
@@ -1144,21 +1121,21 @@
             },
             "datasource": {
               "type": "grafana-athena-datasource",
-              "uid": "7xh5xGgSz"
+              "uid": "$DATASOURCE_UUID"
             },
             "format": 1,
-            "rawSQL": "SELECT\n  distinct(device.device_type) AS \"Device\",\n  ((1 - CAST(SUM(CASE WHEN event.type = 'ad_break_end'  THEN 1 END) AS double) / CAST(SUM(CASE WHEN event.type = 'ad_break_start' THEN 1 END) AS double)) * 100) AS \"Ad Break Drop Off\"\n\nFROM\n  $__table()\nWHERE\n  $__timeFilter(event.timestamp)\n  AND\n  video.media_type = 'ad'\n  AND (\n      '$v_device' = 'All' \n      OR device.device_type = '$v_device'\n  )  \nGROUP by 1\nORDER BY 2 DESC",
+            "rawSQL": "SELECT\n  distinct(device.device_type) AS \"Device\",\n  ((1 - CAST(SUM(CASE WHEN event.type = 'ad_break_end'  THEN 1 END) AS double) / CAST(SUM(CASE WHEN event.type = 'ad_break_start' THEN 1 END) AS double)) * 100) AS \"Ad Break Drop Off\"\n\nFROM\n  $__table()\nWHERE\n  $__timeFilter(event.timestamp)\n  AND\n  video.media_type = 'ad'\n  AND (\n      '$v_device' = 'All' \n      OR device.device_type = '$v_device'\n  )\n  AND (\n      '$v_app_session' = 'All'\n      OR user_details.app_session_id = '$v_app_session'\n  )\n  AND (\n      '$v_country' = 'All'\n      OR geo_location.country = '$v_country'\n  )\n  AND (\n      '$v_content_session_id' = 'All'\n      OR user_details.content_session_id = '$v_content_session_id'\n  )\n  AND (\n      '$v_city' = 'All'\n      OR geo_location.city = '$v_city'\n  )\n  AND (\n      '$v_os_name' = 'All'\n      OR device.os_name = '$v_os_name'\n  )\n  AND (\n      '$v_os_version' = 'All'\n      OR device.os_version = '$v_os_version'\n  )\n  AND (\n      '$v_asn' = 'All'\n      OR network.asn = '$v_asn'\n  )\n  AND (\n      '$v_page_title' = 'All'\n      OR page.page_title = '$v_page_title'\n  )\n  AND (\n      '$v_mobile_connection' = 'All' \n      OR network.mobile_connection = CAST('$v_mobile_connection' AS BOOLEAN)\n  )\nGROUP by 1\nORDER BY 2 DESC",
             "refId": "A",
             "table": "$GLUE_TABLE"
           }
         ],
-        "title": "Ad Drop Off:  $v_device",
+        "title": "Ad Drop Off",
         "type": "table"
       },
       {
         "datasource": {
           "type": "grafana-athena-datasource",
-          "uid": "fef4wg218olq8b"
+          "uid": "$DATASOURCE_UUID"
         },
         "fieldConfig": {
           "defaults": {
@@ -1249,34 +1226,58 @@
             },
             "datasource": {
               "type": "grafana-athena-datasource",
-              "uid": "7xh5xGgSz"
+              "uid": "$DATASOURCE_UUID"
             },
             "format": 1,
-            "rawSQL": "SELECT\n  $__timeGroup(event.timestamp, $interval),\n  ((1 - CAST(SUM(CASE WHEN event.type = 'playback_complete' THEN 1 END) AS double) / CAST(SUM(CASE WHEN event.type = 'playback_start' THEN 1 END) AS double)) * 100) AS Ad_Completion_Rate\n\nFROM\n$__table() \nWHERE\n  $__timeFilter(event.timestamp) \n  AND\n  video.media_type = 'ad'\n  AND (\n      '$v_device' = 'All' \n      OR device.device_type = '$v_device'\n  )  \n\nGROUP by 1\nORDER by 1",
+            "rawSQL": "SELECT\n  $__timeGroup(event.timestamp, $interval),\n  ((1 - CAST(SUM(CASE WHEN event.type = 'playback_complete' THEN 1 END) AS double) / CAST(SUM(CASE WHEN event.type = 'playback_start' THEN 1 END) AS double)) * 100) AS Ad_Completion_Rate\n\nFROM\n$__table() \nWHERE\n  $__timeFilter(event.timestamp) \n  AND\n  video.media_type = 'ad'\n  AND (\n      '$v_device' = 'All' \n      OR device.device_type = '$v_device'\n  )\n  AND (\n      '$v_app_session' = 'All'\n      OR user_details.app_session_id = '$v_app_session'\n  )\n  AND (\n      '$v_country' = 'All'\n      OR geo_location.country = '$v_country'\n  )\n  AND (\n      '$v_content_session_id' = 'All'\n      OR user_details.content_session_id = '$v_content_session_id'\n  )\n  AND (\n      '$v_city' = 'All'\n      OR geo_location.city = '$v_city'\n  )\n  AND (\n      '$v_os_name' = 'All'\n      OR device.os_name = '$v_os_name'\n  )\n  AND (\n      '$v_os_version' = 'All'\n      OR device.os_version = '$v_os_version'\n  )\n  AND (\n      '$v_asn' = 'All'\n      OR network.asn = '$v_asn'\n  )\n  AND (\n      '$v_page_title' = 'All'\n      OR page.page_title = '$v_page_title'\n  )\n  AND (\n      '$v_mobile_connection' = 'All' \n      OR network.mobile_connection = CAST('$v_mobile_connection' AS BOOLEAN)\n  )\n\nGROUP by 1\nORDER by 1",
             "refId": "A",
             "table": "$GLUE_TABLE"
           }
         ],
-        "title": "Ad Completion Rate: $v_device",
+        "title": "Ad Completion Rate",
         "type": "timeseries"
       },
       {
         "datasource": {
           "type": "grafana-athena-datasource",
-          "uid": "fef4wg218olq8b"
+          "uid": "$DATASOURCE_UUID"
         },
         "fieldConfig": {
           "defaults": {
             "color": {
-              "mode": "thresholds"
+              "mode": "palette-classic"
             },
             "custom": {
-              "align": "auto",
-              "cellOptions": {
-                "type": "auto"
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
               },
-              "filterable": false,
-              "inspect": false
+              "insertNulls": false,
+              "lineInterpolation": "smooth",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
             },
             "mappings": [],
             "thresholds": {
@@ -1291,66 +1292,32 @@
                   "value": 80
                 }
               ]
-            }
-          },
-          "overrides": [
-            {
-              "matcher": {
-                "id": "byName",
-                "options": "Revenue"
-              },
-              "properties": [
-                {
-                  "id": "unit",
-                  "value": "currencyUSD"
-                },
-                {
-                  "id": "decimals",
-                  "value": 2
-                }
-              ]
             },
-            {
-              "matcher": {
-                "id": "byName",
-                "options": "Ad Impressions"
-              },
-              "properties": [
-                {
-                  "id": "unit",
-                  "value": "short"
-                }
-              ]
-            }
-          ]
+            "unit": "short"
+          },
+          "overrides": []
         },
         "gridPos": {
           "h": 9,
           "w": 8,
           "x": 0,
-          "y": 22
+          "y": 17
         },
-        "id": 6,
+        "id": 4,
         "options": {
-          "cellHeight": "sm",
-          "footer": {
-            "countRows": false,
-            "enablePagination": true,
-            "fields": "",
-            "reducer": [
+          "legend": {
+            "calcs": [
               "sum"
             ],
-            "show": false
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
           },
-          "showHeader": true,
-          "sortBy": [
-            {
-              "desc": true,
-              "displayName": "Ad Impressions"
-            }
-          ]
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
         },
-        "pluginVersion": "10.4.1",
         "targets": [
           {
             "connectionArgs": {
@@ -1362,21 +1329,21 @@
             },
             "datasource": {
               "type": "grafana-athena-datasource",
-              "uid": "7xh5xGgSz"
+              "uid": "$DATASOURCE_UUID"
             },
             "format": 1,
-            "rawSQL": "SELECT\n  ad.ad_system AS \"Ad System\",\n  COUNT(CASE WHEN (( event.type  ) LIKE 'ad_impression') THEN 1 ELSE NULL END) AS \"Ad Impressions\"\nFROM $__table() \nWHERE\n  $__timeFilter(event.timestamp)\nAND (\n    '$v_device' = 'All' \n    OR device.device_type = '$v_device'\n)\n  \n  GROUP by 1\n  ORDER by 1\n",
+            "rawSQL": "SELECT\n    $__timeGroup(event.timestamp, $interval) ,\n    COUNT(CASE WHEN ((event.type) LIKE 'ad_impression') THEN 1 ELSE NULL END) AS \"Ad Impressions\"\nFROM\n  $__table() \nWHERE\n  $__timeFilter(event.timestamp)\n  AND (\n      '$v_device' = 'All' \n      OR device.device_type = '$v_device'\n  )\n  AND (\n      '$v_app_session' = 'All'\n      OR user_details.app_session_id = '$v_app_session'\n  )\n  AND (\n      '$v_country' = 'All'\n      OR geo_location.country = '$v_country'\n  )\n  AND (\n      '$v_content_session_id' = 'All'\n      OR user_details.content_session_id = '$v_content_session_id'\n  )\n  AND (\n      '$v_city' = 'All'\n      OR geo_location.city = '$v_city'\n  )\n  AND (\n      '$v_os_name' = 'All'\n      OR device.os_name = '$v_os_name'\n  )\n  AND (\n      '$v_os_version' = 'All'\n      OR device.os_version = '$v_os_version'\n  )\n  AND (\n      '$v_asn' = 'All'\n      OR network.asn = '$v_asn'\n  )\n  AND (\n      '$v_page_title' = 'All'\n      OR page.page_title = '$v_page_title'\n  )\n  AND (\n      '$v_mobile_connection' = 'All' \n      OR network.mobile_connection = CAST('$v_mobile_connection' AS BOOLEAN)\n  )\nGROUP BY 1\nORDER BY 1\n\n",
             "refId": "A",
             "table": "$GLUE_TABLE"
           }
         ],
-        "title": "Impressions by Ad System: $v_device",
-        "type": "table"
+        "title": "Ad Impressions",
+        "type": "timeseries"
       },
       {
         "datasource": {
           "type": "grafana-athena-datasource",
-          "uid": "fef4wg218olq8b"
+          "uid": "$DATASOURCE_UUID"
         },
         "fieldConfig": {
           "defaults": {
@@ -1396,8 +1363,7 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green",
-                  "value": null
+                  "color": "green"
                 },
                 {
                   "color": "red",
@@ -1476,21 +1442,133 @@
             },
             "datasource": {
               "type": "grafana-athena-datasource",
-              "uid": "7xh5xGgSz"
+              "uid": "$DATASOURCE_UUID"
             },
             "format": 1,
-            "rawSQL": "SELECT\n  event.attributes.error_msg AS \"Error Message\",\n  event.attributes.error_code AS \"Error Code\",\n  COUNT(CASE WHEN ((event.type) LIKE 'error') THEN 1 ELSE NULL END) AS \"Error Count\"\nFROM\n  $__table()\nWHERE\n  $__timeFilter(event.timestamp)\nAND\n  video.media_type = 'ad'\nAND (\n  '$v_device' = 'All' \n  OR device.device_type = '$v_device'\n) \nGROUP by 1,2\n\n\n",
+            "rawSQL": "SELECT\n  event.attributes.error_msg AS \"Error Message\",\n  event.attributes.error_code AS \"Error Code\",\n  COUNT(CASE WHEN ((event.type) LIKE 'error') THEN 1 ELSE NULL END) AS \"Error Count\"\nFROM\n  $__table()\nWHERE\n  $__timeFilter(event.timestamp)\nAND\n  video.media_type = 'ad'\nAND (\n      '$v_device' = 'All' \n      OR device.device_type = '$v_device'\n  )\n  AND (\n      '$v_app_session' = 'All'\n      OR user_details.app_session_id = '$v_app_session'\n  )\n  AND (\n      '$v_country' = 'All'\n      OR geo_location.country = '$v_country'\n  )\n  AND (\n      '$v_content_session_id' = 'All'\n      OR user_details.content_session_id = '$v_content_session_id'\n  )\n  AND (\n      '$v_city' = 'All'\n      OR geo_location.city = '$v_city'\n  )\n  AND (\n      '$v_os_name' = 'All'\n      OR device.os_name = '$v_os_name'\n  )\n  AND (\n      '$v_os_version' = 'All'\n      OR device.os_version = '$v_os_version'\n  )\n  AND (\n      '$v_asn' = 'All'\n      OR network.asn = '$v_asn'\n  )\n  AND (\n      '$v_page_title' = 'All'\n      OR page.page_title = '$v_page_title'\n  )\n  AND (\n      '$v_mobile_connection' = 'All' \n      OR network.mobile_connection = CAST('$v_mobile_connection' AS BOOLEAN)\n  ) \nGROUP by 1,2\n\n\n",
             "refId": "A",
             "table": "$GLUE_TABLE"
           }
         ],
-        "title": "Error Details: $v_device",
+        "title": "Error Details",
         "type": "table"
       },
       {
         "datasource": {
           "type": "grafana-athena-datasource",
-          "uid": "fef4wg218olq8b"
+          "uid": "$DATASOURCE_UUID"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "auto"
+              },
+              "filterable": false,
+              "inspect": false
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green"
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Revenue"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "currencyUSD"
+                },
+                {
+                  "id": "decimals",
+                  "value": 2
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Ad Impressions"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "short"
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 9,
+          "w": 8,
+          "x": 0,
+          "y": 26
+        },
+        "id": 6,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "enablePagination": true,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true,
+          "sortBy": [
+            {
+              "desc": true,
+              "displayName": "Ad Impressions"
+            }
+          ]
+        },
+        "pluginVersion": "10.4.1",
+        "targets": [
+          {
+            "connectionArgs": {
+              "catalog": "__default",
+              "database": "__default",
+              "region": "__default",
+              "resultReuseEnabled": false,
+              "resultReuseMaxAgeInMinutes": 60
+            },
+            "datasource": {
+              "type": "grafana-athena-datasource",
+              "uid": "$DATASOURCE_UUID"
+            },
+            "format": 1,
+            "rawSQL": "SELECT\n  ad.ad_system AS \"Ad System\",\n  COUNT(CASE WHEN (( event.type  ) LIKE 'ad_impression') THEN 1 ELSE NULL END) AS \"Ad Impressions\"\nFROM $__table() \nWHERE\n  $__timeFilter(event.timestamp)\nAND (\n    '$v_device' = 'All' \n    OR device.device_type = '$v_device'\n)\nAND (\n    '$v_app_session' = 'All'\n    OR user_details.app_session_id = '$v_app_session'\n)\nAND (\n    '$v_country' = 'All'\n    OR geo_location.country = '$v_country'\n)\nAND (\n    '$v_content_session_id' = 'All'\n    OR user_details.content_session_id = '$v_content_session_id'\n)\nAND (\n    '$v_city' = 'All'\n    OR geo_location.city = '$v_city'\n)\nAND (\n    '$v_os_name' = 'All'\n    OR device.os_name = '$v_os_name'\n)\nAND (\n    '$v_os_version' = 'All'\n    OR device.os_version = '$v_os_version'\n)\nAND (\n    '$v_asn' = 'All'\n    OR network.asn = '$v_asn'\n)\nAND (\n    '$v_page_title' = 'All'\n    OR page.page_title = '$v_page_title'\n)\nAND (\n    '$v_mobile_connection' = 'All' \n    OR network.mobile_connection = CAST('$v_mobile_connection' AS BOOLEAN)\n)\n  \n  GROUP by 1\n  ORDER by 1\n",
+            "refId": "A",
+            "table": "$GLUE_TABLE"
+          }
+        ],
+        "title": "Impressions by Ad System",
+        "type": "table"
+      },
+      {
+        "datasource": {
+          "type": "grafana-athena-datasource",
+          "uid": "$DATASOURCE_UUID"
         },
         "fieldConfig": {
           "defaults": {
@@ -1537,8 +1615,7 @@
               "mode": "absolute",
               "steps": [
                 {
-                  "color": "green",
-                  "value": null
+                  "color": "green"
                 },
                 {
                   "color": "red",
@@ -1576,9 +1653,9 @@
           ]
         },
         "gridPos": {
-          "h": 11,
-          "w": 8,
-          "x": 0,
+          "h": 9,
+          "w": 16,
+          "x": 8,
           "y": 31
         },
         "id": 11,
@@ -1607,15 +1684,15 @@
             },
             "datasource": {
               "type": "grafana-athena-datasource",
-              "uid": "7xh5xGgSz"
+              "uid": "$DATASOURCE_UUID"
             },
             "format": 1,
-            "rawSQL": "SELECT\n$__timeGroup(event.timestamp, $interval),\n((1 - CAST(SUM(CASE WHEN event.type = 'error' THEN 1 END) AS double) / CAST(SUM(CASE WHEN event.type = 'media_request' THEN 1 END) AS double)) * 100) AS \"Ad Error Rate\"\nFROM $__table\nWHERE\n  $__timeFilter(event.timestamp)\nAND\n  video.media_type='ad'\nAND (\n    '$v_device' = 'All' \n    OR device.device_type = '$v_device'\n)\n\nGROUP BY 1\nORDER BY 1",
+            "rawSQL": "SELECT\n$__timeGroup(event.timestamp, $interval),\n((1 - CAST(SUM(CASE WHEN event.type = 'error' THEN 1 END) AS double) / CAST(SUM(CASE WHEN event.type = 'media_request' THEN 1 END) AS double)) * 100) AS \"Ad Error Rate\"\nFROM $__table\nWHERE\n  $__timeFilter(event.timestamp)\nAND\n  video.media_type='ad'\nAND (\n      '$v_device' = 'All' \n      OR device.device_type = '$v_device'\n  )\n  AND (\n      '$v_app_session' = 'All'\n      OR user_details.app_session_id = '$v_app_session'\n  )\n  AND (\n      '$v_country' = 'All'\n      OR geo_location.country = '$v_country'\n  )\n  AND (\n      '$v_content_session_id' = 'All'\n      OR user_details.content_session_id = '$v_content_session_id'\n  )\n  AND (\n      '$v_city' = 'All'\n      OR geo_location.city = '$v_city'\n  )\n  AND (\n      '$v_os_name' = 'All'\n      OR device.os_name = '$v_os_name'\n  )\n  AND (\n      '$v_os_version' = 'All'\n      OR device.os_version = '$v_os_version'\n  )\n  AND (\n      '$v_asn' = 'All'\n      OR network.asn = '$v_asn'\n  )\n  AND (\n      '$v_page_title' = 'All'\n      OR page.page_title = '$v_page_title'\n  )\n  AND (\n      '$v_mobile_connection' = 'All' \n      OR network.mobile_connection = CAST('$v_mobile_connection' AS BOOLEAN)\n  )\n\nGROUP BY 1\nORDER BY 1",
             "refId": "A",
             "table": "$GLUE_TABLE"
           }
         ],
-        "title": "Ad Error Rate: $v_device",
+        "title": "Ad Error Rate",
         "type": "timeseries"
       }
     ],
@@ -1702,15 +1779,16 @@
         },
         {
           "current": {
-            "selected": true,
+            "selected": false,
             "text": "All",
             "value": "All"
           },
           "datasource": {
             "type": "grafana-athena-datasource",
-            "uid": "fef4wg218olq8b"
+            "uid": "$DATASOURCE_UUID"
           },
           "definition": "",
+          "description": "Describes the type of device category being used during the session such as phone, tablet, desktop, connected device, game console, etc.",
           "hide": 0,
           "includeAll": false,
           "label": "Device",
@@ -1737,15 +1815,16 @@
         },
         {
           "current": {
-            "selected": true,
+            "selected": false,
             "text": "All",
             "value": "All"
           },
           "datasource": {
             "type": "grafana-athena-datasource",
-            "uid": "fef4wg218olq8b"
+            "uid": "$DATASOURCE_UUID"
           },
           "definition": "",
+          "description": "Unique identifier for the user's current Datazoom session. Session will persist as long as the user is viewing content uninterrupted. A 20 minute pause in activity will close the session.",
           "hide": 0,
           "includeAll": false,
           "label": "AppSessionId",
@@ -1772,15 +1851,16 @@
         },
         {
           "current": {
-            "selected": true,
+            "selected": false,
             "text": "All",
             "value": "All"
           },
           "datasource": {
             "type": "grafana-athena-datasource",
-            "uid": "fef4wg218olq8b"
+            "uid": "$DATASOURCE_UUID"
           },
           "definition": "",
+          "description": "Full name of the user's country",
           "hide": 0,
           "includeAll": false,
           "label": "Country",
@@ -1807,11 +1887,16 @@
         },
         {
           "current": {
-            "selected": true,
+            "selected": false,
             "text": "All",
             "value": "All"
           },
+          "datasource": {
+            "type": "grafana-athena-datasource",
+            "uid": "$DATASOURCE_UUID"
+          },
           "definition": "",
+          "description": "A unique id for the current video playback session.",
           "hide": 0,
           "includeAll": false,
           "label": "ContentSessionId",
@@ -1838,11 +1923,16 @@
         },
         {
           "current": {
-            "selected": true,
+            "selected": false,
             "text": "All",
             "value": "All"
           },
+          "datasource": {
+            "type": "grafana-athena-datasource",
+            "uid": "$DATASOURCE_UUID"
+          },
           "definition": "",
+          "description": "The city or town where the user is located",
           "hide": 0,
           "includeAll": false,
           "label": "City",
@@ -1869,11 +1959,16 @@
         },
         {
           "current": {
-            "selected": true,
+            "selected": false,
             "text": "All",
             "value": "All"
           },
+          "datasource": {
+            "type": "grafana-athena-datasource",
+            "uid": "$DATASOURCE_UUID"
+          },
           "definition": "",
+          "description": "Operating System of the user's device",
           "hide": 0,
           "includeAll": false,
           "label": "OsName",
@@ -1900,11 +1995,16 @@
         },
         {
           "current": {
-            "selected": true,
+            "selected": false,
             "text": "All",
             "value": "All"
           },
+          "datasource": {
+            "type": "grafana-athena-datasource",
+            "uid": "$DATASOURCE_UUID"
+          },
           "definition": "",
+          "description": "Version of Operating System being used during the session",
           "hide": 0,
           "includeAll": false,
           "label": "OsVersion",
@@ -1931,11 +2031,16 @@
         },
         {
           "current": {
-            "selected": true,
+            "selected": false,
             "text": "All",
             "value": "All"
           },
+          "datasource": {
+            "type": "grafana-athena-datasource",
+            "uid": "$DATASOURCE_UUID"
+          },
           "definition": "",
+          "description": "Autonomous System Number: a unique number identifying a group of IP networks that serves the content to the end-user. Client ASN as determined from a lookup of the client IP",
           "hide": 0,
           "includeAll": false,
           "label": "ASN",
@@ -1962,11 +2067,16 @@
         },
         {
           "current": {
-            "selected": true,
+            "selected": false,
             "text": "All",
             "value": "All"
           },
+          "datasource": {
+            "type": "grafana-athena-datasource",
+            "uid": "$DATASOURCE_UUID"
+          },
           "definition": "",
+          "description": "The title of the page from which the event originated.",
           "hide": 0,
           "includeAll": false,
           "label": "PageTitle",
@@ -1990,6 +2100,42 @@
           "skipUrlSync": false,
           "sort": 0,
           "type": "query"
+        },
+        {
+          "current": {
+            "selected": false,
+            "text": "false",
+            "value": "false"
+          },
+          "datasource": {
+            "type": "grafana-athena-datasource",
+            "uid": "$DATASOURCE_UUID"
+          },
+          "definition": "",
+          "description": "Specifies if a user is on a mobile connection as determined by their IP address",
+          "hide": 0,
+          "includeAll": false,
+          "label": "Mobile Connection",
+          "multi": false,
+          "name": "v_mobile_connection",
+          "options": [],
+          "query": {
+            "connectionArgs": {
+              "catalog": "__default",
+              "database": "__default",
+              "region": "__default",
+              "resultReuseEnabled": false,
+              "resultReuseMaxAgeInMinutes": 60
+            },
+            "format": 1,
+            "rawSQL": "SELECT 'All' AS MobileConnection\nUNION\nSELECT DISTINCT \n    CASE \n        WHEN network.mobile_connection = TRUE THEN 'true'\n        WHEN network.mobile_connection = FALSE THEN 'false'\n    END AS MobileConnection\nFROM $__table \nWHERE $__timeFilter(event.timestamp);\n",
+            "table": "$GLUE_TABLE"
+          },
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 0,
+          "type": "query"
         }
       ]
     },
@@ -2001,7 +2147,7 @@
     "timezone": "browser",
     "title": "TrackIt X Datazoom (NAB Demo)",
     "uid": "edq5ky0imp14wfr",
-    "version": 22,
+    "version": 34,
     "weekStart": ""
   }
 }

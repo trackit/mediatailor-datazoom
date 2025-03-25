@@ -63,6 +63,39 @@ def create_dashboard(grafana_endpoint, headers, body):
     if response.status != 200:
         raise Exception(f"Failed to create dashboard: {response.data}")
 
+    
+def create_athena_data_source(grafana_endpoint, headers):
+    payload = {
+        "name": "Athena",
+        "type": "grafana-athena-datasource",
+        "access": "proxy",
+        "jsonData": {
+            "authType": "default",
+            "defaultRegion": os.getenv("ATHENA_REGION", "us-west-2"),
+            "catalog":  os.getenv("ATHENA_CATALOG", "AwsDataCatalog"),
+            "database": os.getenv("GLUE_DATABASE_NAME"),
+            "workgroup": os.getenv("ATHENA_WORKGROUP")
+        }
+    }
+
+    response = http.request(
+        "POST",
+        f"{grafana_endpoint}/api/datasources",
+        headers=headers,
+        body=json.dumps(payload)
+    )
+
+    if response.status != 200:
+        raise Exception(f"Failed to create Athena data source: {response.data}")
+    
+    response_data = json.loads(response.data.decode("utf-8"))
+    datasource_id = response_data.get("datasource", {}).get("uid")
+
+    if not datasource_id:
+        raise Exception("Failed to retrieve one or both IDs from the response.")
+    
+    return datasource_id
+
 
 def lambda_handler(event, context):
     try:
@@ -79,7 +112,6 @@ def lambda_handler(event, context):
         token, service_account_id = create_service_account_token(workspace_id).values()
 
         glue_table = os.getenv("GLUE_TABLE_NAME")
-        config_str = json.dumps(dashboard_definition).replace("$GLUE_TABLE", glue_table)
 
         headers = {
             "Content-Type": "application/json",
@@ -87,6 +119,8 @@ def lambda_handler(event, context):
         }
 
         install_athena_data_source_plugin(grafana_endpoint, headers)
+        data_source_id = create_athena_data_source(grafana_endpoint, headers)
+        config_str = json.dumps(dashboard_definition).replace("$GLUE_TABLE", glue_table).replace("$DATASOURCE_UUID", data_source_id)
         create_dashboard(grafana_endpoint, headers, config_str)
         delete_service_account(workspace_id, service_account_id)
 
