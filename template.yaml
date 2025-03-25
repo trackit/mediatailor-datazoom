@@ -17,11 +17,11 @@ Resources:
               Statement:
                 - Effect: Allow
                   Action:
-                    - firehose:ListDeliveryStreams
+                    - 'firehose:ListDeliveryStreams'
                   Resource: '*'
                 - Effect: Allow
                   Action:
-                    - firehose:*
+                    - 'firehose:*'
                   Resource: !GetAtt KinesisFirehoseStream.Arn
 
   KinesisServiceRole:
@@ -32,10 +32,10 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              Service: firehose.amazonaws.com
+              Service: 'firehose.amazonaws.com'
             Action: 'sts:AssumeRole'
       Policies:
-        - PolicyName: 'KinisisServiceRolePolicy'
+        - PolicyName: KinisisServiceRolePolicy
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -64,12 +64,12 @@ Resources:
                 Resource: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-KinesisFormattingFunction'
 
   KinesisLogsBucket:
-    Type: AWS::S3::Bucket
+    Type: 'AWS::S3::Bucket'
     Properties:
       BucketName: !Sub '${AWS::StackName}-logs'
 
   KinesisFormattingFunction:
-    Type: AWS::Serverless::Function
+    Type: 'AWS::Serverless::Function'
     Properties:
       FunctionName: !Sub '${AWS::StackName}-KinesisFormattingFunction'
       CodeUri: src/lambda-functions/kinesis-formatting/
@@ -125,10 +125,10 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              Service: glue.amazonaws.com
+              Service: 'glue.amazonaws.com'
             Action: 'sts:AssumeRole'
       ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
+        - 'arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole'
       Policies:
         - PolicyName: GlueServiceRolePolicy
           PolicyDocument:
@@ -142,19 +142,19 @@ Resources:
                   - !Sub 'arn:aws:s3:::${AWS::StackName}-logs/datazoom-connector/*'
 
   GlueDatabase:
-    Type: AWS::Glue::Database
+    Type: 'AWS::Glue::Database'
     Properties:
       CatalogId: !Ref AWS::AccountId
       DatabaseInput:
         Name: !Ref AWS::StackName
 
   GlueTable:
-    Type: AWS::Glue::Table
+    Type: 'AWS::Glue::Table'
     Properties:
       CatalogId: !Ref AWS::AccountId
       DatabaseName: !Ref GlueDatabase
       TableInput:
-        Name: 'datazoom_connector' # TODO: set value dynamically
+        Name: 'datazoom_connector'
         TableType: EXTERNAL_TABLE
         StorageDescriptor:
           Columns:
@@ -189,7 +189,7 @@ Resources:
             SerializationLibrary: 'org.openx.data.jsonserde.JsonSerDe'
 
   GlueCrawler:
-    Type: AWS::Glue::Crawler
+    Type: 'AWS::Glue::Crawler'
     Properties:
       Name: !Ref AWS::StackName
       Role: !GetAtt GlueServiceRole.Arn
@@ -200,14 +200,14 @@ Resources:
       Schedule:
         ScheduleExpression: 'cron(0 */6 * * ? *)'
       SchemaChangePolicy:
-        UpdateBehavior: "LOG"
-        DeleteBehavior: "LOG"
+        UpdateBehavior: 'LOG'
+        DeleteBehavior: 'LOG'
 
   ###############################
   #           Athena            #
   ###############################
   AthenaWorkGroup:
-    Type: AWS::Athena::WorkGroup
+    Type: 'AWS::Athena::WorkGroup'
     Properties:
       Name: !Ref AWS::StackName
       RecursiveDeleteOption: true
@@ -223,12 +223,12 @@ Resources:
   #           Grafana           #
   ###############################
   GrafanaConfigBucket:
-    Type: AWS::S3::Bucket
+    Type: 'AWS::S3::Bucket'
     Properties:
       BucketName: !Sub '${AWS::StackName}-grafana-config'
 
   GrafanaDeploymentLambdaRole:
-    Type: AWS::IAM::Role
+    Type: 'AWS::IAM::Role'
     Properties:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
@@ -236,11 +236,11 @@ Resources:
           - Effect: Allow
             Principal:
               Service:
-                - lambda.amazonaws.com
+                - 'lambda.amazonaws.com'
             Action:
-              - sts:AssumeRole
+              - 'sts:AssumeRole'
       ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
       Policies:
         - PolicyName: GrafanaPolicy
           PolicyDocument:
@@ -254,7 +254,7 @@ Resources:
                 Resource: !Sub 'arn:aws:grafana:${AWS::Region}:${AWS::AccountId}:/workspaces/${AmazonGrafanaWorkspace.Id}'
 
   GrafanaDashboardDeploymentFunction:
-    Type: AWS::Serverless::Function
+    Type: 'AWS::Serverless::Function'
     Properties:
       FunctionName: !Sub '${AWS::StackName}-dashboard-deployment'
       Runtime: python3.12
@@ -274,22 +274,22 @@ Resources:
           GLUE_DATABASE_NAME: !Ref GlueDatabase
 
   DashboardCreationCustomResource:
-    Type: AWS::CloudFormation::CustomResource
+    Type: 'AWS::CloudFormation::CustomResource'
     Properties:
       ServiceToken: !GetAtt GrafanaDashboardDeploymentFunction.Arn
       ServiceTimeout: 60
     DependsOn: AmazonGrafanaWorkspace
 
   GrafanaIAMRole:
-    Type: AWS::IAM::Role
+    Type: 'AWS::IAM::Role'
     Properties:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
-              Service: grafana.amazonaws.com
-            Action: sts:AssumeRole
+              Service: 'grafana.amazonaws.com'
+            Action: 'sts:AssumeRole'
       Policies:
         - PolicyName: GrafanaAthenaPolicy
           PolicyDocument:
@@ -343,13 +343,13 @@ Resources:
                   - !Sub 'arn:aws:s3:::${AWS::StackName}-logs'
 
   AmazonGrafanaWorkspace:
-    Type: AWS::Grafana::Workspace
+    Type: 'AWS::Grafana::Workspace'
     Properties:
       Name: !Ref AWS::StackName
-      AccountAccessType: CURRENT_ACCOUNT
+      AccountAccessType: 'CURRENT_ACCOUNT'
       AuthenticationProviders:
-        - AWS_SSO
-      PermissionType: SERVICE_MANAGED
+        - 'AWS_SSO'
+      PermissionType: 'SERVICE_MANAGED'
       GrafanaVersion: 10.4
       RoleArn: !GetAtt GrafanaIAMRole.Arn
       DataSources:
