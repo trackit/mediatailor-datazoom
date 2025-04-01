@@ -10,11 +10,12 @@ This example demonstrates how to use VideoJS with MediaTailor to create a video 
 
 ### Deploy
 
-For simplicity, the MediaTailor playback configuration will be created manually in the AWS console, it was not possible to get the video content source url from the MediaTailor channel. The rest of the pipeline will be created using the SAM template.
+For simplicity, the MediaTailor playback configuration will be created manually in the AWS console, it was not possible to get the video content source url from the MediaTailor channel. The same applies to the channel programs. The rest of the pipeline will be created using the SAM template.
 
 Execute the following command to deploy the pipeline:
 
 ```bash
+cd infra
 sam build
 sam deploy --parameter-overrides \
   AssetsBucket=NAME_OF_THE_BUCKET \
@@ -35,6 +36,11 @@ sam deploy --parameter-overrides \
 
 4. Take note of the session initialization prefix, ad the manifest name and extension at the end.
   - e.g. `https://8xkgu3wpm6y0zbg0ag6olwxn2ep08o5r.mediatailor.us-west-2.amazonaws.com/v1/session/pwehk0yyqloebsv6vxo643wenxp1ut1s876uyh14/mediatailor-datazoom/index.m3u8`
+
+
+### Channel programs
+
+Follow this [link](https://docs.aws.amazon.com/mediatailor/latest/ug/channel-assembly-adding-programs.html) to create the channel programs. The example uses two HLS playlists, one for the primary source and one for the secondary source. The primary source is the main content and the secondary source is the ad content.
 
 ### DataZoom configuration
 
