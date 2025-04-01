@@ -57,6 +57,10 @@ Before deploying the stack, ensure you have:
 4. Put the **Access Key** and **Secret Access Key** from the previous step.
 
 ### Configure Datazoom Collector
+
+> [!NOTE]
+> If you do not already have a Datazoom collector, you can follow [this example](./examples/videojs-mediatailor/README.md) to deploy a MediaTailor channel and a VideoJS player that sends metrics to Datazoom.
+
 1. In Datazoom, select the collector of your choice, can be Video.JS.
 2. If you're using any **ADS** (Ad decision server), please select **Player Default** in the Ad Framework section.
 3. Then, in the **integration** section, you can copy your `configuration_id`. You'll need it to setup the SDK and be able to collect data.
